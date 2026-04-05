@@ -758,7 +758,17 @@ function render() {
   for (let i=0; i<state.opponent_hand_count; i++) oh.innerHTML += '<div class="card card-back" style="width:45px;height:65px;font-size:0.8rem;"></div>';
 
   renderBoard("opp-board", state.opponent_board, true);
-  document.getElementById("deck-card").style.display = state.deck_count > 0 ? "inline-flex" : "none";
+  const deckEl = document.getElementById("deck-card");
+  deckEl.style.display = state.deck_count > 0 ? "inline-flex" : "none";
+  if (state.deck_count <= 5 && state.deck_count > 0) {
+    deckEl.style.background = "linear-gradient(135deg, #7f1d1d 0%, #b71c1c 40%, #7f1d1d 60%, #c62828 100%)";
+    deckEl.style.borderColor = "#ef5350";
+    deckEl.style.boxShadow = "0 2px 10px rgba(198,40,40,0.5)";
+  } else {
+    deckEl.style.background = "";
+    deckEl.style.borderColor = "";
+    deckEl.style.boxShadow = "";
+  }
   document.getElementById("deck-count").textContent = state.deck_count;
   const dc = document.getElementById("discard-card");
   dc.innerHTML = state.discard_top ? cardHTML(state.discard_top) : '<div class="card" style="border:2px dashed rgba(255,255,255,0.2);background:transparent;"></div>';
