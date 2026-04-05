@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Royalty High</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #1a5c2a; color: #fff;
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; padding: 12px; overflow-x: hidden;
+}
+h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
+
+/* Waiting */
+#waiting { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; }
+.spinner { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; margin-left: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#game { display: none; width: 100%; max-width: 900px; }
+
+/* Status bar */
+#status-bar { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 8px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; flex-wrap: wrap; gap: 6px; }
+#status-bar .turn-indicator { font-weight: bold; font-size: 1rem; }
+.badge { background: rgba(255,255,255,0.15); border-radius: 12px; padding: 2px 10px; font-size: 0.8rem; }
+
+.section { margin-bottom: 10px; }
+.section-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; margin-bottom: 4px; }
+
+/* --- Cards --- */
+.card { width: 68px; height: 98px; border-radius: 8px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; position: relative; transition: transform 0.15s, box-shadow 0.15s; flex-shrink: 0; cursor: default; overflow: hidden; }
+
+/* --- Knight cards (A, 2-10) --- */
+.card-knight {
+  background: linear-gradient(160deg, #2c3e50 0%, #1a252f 50%, #2c3e50 100%);
+  border: 2px solid #4a6274;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+  color: #c0cdd8;
+}
+.card-knight::before {
+  content: ""; position: absolute; inset: 3px; border: 1px solid rgba(255,255,255,0.08); border-radius: 5px; pointer-events: none;
+}
+.card-knight .card-icon { font-size: 1.6rem; opacity: 0.2; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+.card-knight .rank { font-size: 1.5rem; font-weight: 900; z-index: 1; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+.card-knight .suit-badge { font-size: 0.7rem; z-index: 1; margin-top: -2px; }
+.card-knight .power-num { position: absolute; bottom: 4px; right: 6px; font-size: 0.6rem; opacity: 0.5; z-index: 1; }
+.card-knight .corner { position: absolute; font-size: 0.5rem; line-height: 1; z-index: 1; }
+.card-knight .corner-tl { top: 3px; left: 4px; }
+.card-knight .corner-br { bottom: 3px; right: 4px; transform: rotate(180deg); }
+
+/* Knight suit color accents */
+.card-knight.hearts { border-color: #8b3a3a; }
+.card-knight.hearts .rank, .card-knight.hearts .suit-badge { color: #e57373; }
+.card-knight.diamonds { border-color: #8b6914; }
+.card-knight.diamonds .rank, .card-knight.diamonds .suit-badge { color: #ffb74d; }
+.card-knight.clubs { border-color: #2e7d32; }
+.card-knight.clubs .rank, .card-knight.clubs .suit-badge { color: #81c784; }
+.card-knight.spades { border-color: #4a4a7a; }
+.card-knight.spades .rank, .card-knight.spades .suit-badge { color: #9fa8da; }
+
+/* --- Ace card (special) --- */
+.card-ace {
+  background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  border: 2px solid #e94560;
+  box-shadow: 0 2px 10px rgba(233,69,96,0.3), inset 0 0 20px rgba(233,69,96,0.05);
+  color: #e94560;
+}
+.card-ace::before {
+  content: ""; position: absolute; inset: 3px; border: 1px solid rgba(233,69,96,0.2); border-radius: 5px; pointer-events: none;
+}
+.card-ace::after {
+  content: "\1F6E1"; position: absolute; font-size: 2.2rem; opacity: 0.1; top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none;
+}
+.card-ace .rank { font-size: 1.6rem; font-weight: 900; z-index: 1; text-shadow: 0 0 8px rgba(233,69,96,0.4); }
+.card-ace .suit-badge { font-size: 0.7rem; z-index: 1; }
+.card-ace .ace-label { font-size: 0.45rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.6; z-index: 1; margin-top: 2px; }
+.card-ace .corner { position: absolute; font-size: 0.5rem; line-height: 1; z-index: 1; color: #e94560; }
+.card-ace .corner-tl { top: 3px; left: 4px; }
+.card-ace .corner-br { bottom: 3px; right: 4px; transform: rotate(180deg); }
+
+/* --- Royal cards (J/Q/K) --- */
+.card-royal {
+  border: 2px solid;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  color: #fff;
+}
+.card-royal::before {
+  content: ""; position: absolute; inset: 3px; border: 1px solid rgba(255,255,255,0.15); border-radius: 5px; pointer-events: none; z-index: 1;
+}
+.card-royal .royal-icon { font-size: 1.8rem; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+.card-royal .royal-rank { font-size: 0.75rem; font-weight: 900; letter-spacing: 1px; z-index: 1; text-transform: uppercase; margin-top: 2px; }
+.card-royal .royal-title { font-size: 0.42rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.7; z-index: 1; }
+.card-royal .corner { position: absolute; font-size: 0.5rem; line-height: 1; z-index: 1; }
+.card-royal .corner-tl { top: 3px; left: 4px; }
+.card-royal .corner-br { bottom: 3px; right: 4px; transform: rotate(180deg); }
+.card-royal .royal-bg-icon { position: absolute; font-size: 3.5rem; opacity: 0.08; top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; }
+
+/* Royal — Hearts (Crimson/Rose Gold) */
+.card-royal.hearts {
+  background: linear-gradient(160deg, #4a1028 0%, #6b1535 30%, #8b1a42 60%, #4a1028 100%);
+  border-color: #d4a07a;
+  box-shadow: 0 2px 12px rgba(139,26,66,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.card-royal.hearts .royal-icon, .card-royal.hearts .corner { color: #f8bbd0; }
+.card-royal.hearts .royal-rank { color: #d4a07a; }
+
+/* Royal — Diamonds (Gold/Amber) */
+.card-royal.diamonds {
+  background: linear-gradient(160deg, #3e2723 0%, #5d4037 30%, #6d4c2a 60%, #3e2723 100%);
+  border-color: #ffd54f;
+  box-shadow: 0 2px 12px rgba(255,213,79,0.25), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.card-royal.diamonds .royal-icon, .card-royal.diamonds .corner { color: #fff176; }
+.card-royal.diamonds .royal-rank { color: #ffd54f; }
+
+/* Royal — Clubs (Emerald/Silver) */
+.card-royal.clubs {
+  background: linear-gradient(160deg, #0d2818 0%, #1b4332 30%, #2d6a4f 60%, #0d2818 100%);
+  border-color: #a8dadc;
+  box-shadow: 0 2px 12px rgba(45,106,79,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.card-royal.clubs .royal-icon, .card-royal.clubs .corner { color: #b2dfdb; }
+.card-royal.clubs .royal-rank { color: #a8dadc; }
+
+/* Royal — Spades (Deep Purple/Silver) */
+.card-royal.spades {
+  background: linear-gradient(160deg, #1a0a2e 0%, #2d1b4e 30%, #4a2c6e 60%, #1a0a2e 100%);
+  border-color: #b39ddb;
+  box-shadow: 0 2px 12px rgba(74,44,110,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.card-royal.spades .royal-icon, .card-royal.spades .corner { color: #ce93d8; }
+.card-royal.spades .royal-rank { color: #b39ddb; }
+
+/* Royal shimmer effect */
+.card-royal::after {
+  content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+  background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.03) 50%, transparent 60%);
+  pointer-events: none; z-index: 2;
+}
+
+.card-back { background: linear-gradient(135deg, #1a237e 0%, #283593 40%, #1a237e 60%, #303f9f 100%); border: 2px solid #5c6bc0; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+.card-back::before { content: ""; position: absolute; inset: 5px; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; }
+.card-back::after { content: "\265B"; color: rgba(255,255,255,0.1); font-size: 1.8rem; }
+
+/* Small card variant for attack flashes & endgame */
+.sm-card { width: 55px !important; height: 80px !important; }
+.sm-card .rank { font-size: 1.1rem !important; }
+.sm-card .royal-icon { font-size: 1.3rem !important; }
+.sm-card .royal-rank { font-size: 0.6rem !important; }
+.sm-card .royal-title { display: none; }
+.sm-card .ace-label { display: none; }
+.sm-card .corner { font-size: 0.4rem !important; }
+.sm-card .card-icon { font-size: 1.2rem !important; }
+.sm-card .suit-badge { font-size: 0.55rem !important; }
+
+/* Selectable hand cards */
+.hand-card { cursor: pointer; }
+.hand-card:hover { transform: translateY(-6px); }
+.hand-card.selected { transform: translateY(-10px); box-shadow: 0 0 0 3px #ffeb3b, 0 4px 12px rgba(0,0,0,0.4); }
+.hand-card.dimmed { opacity: 0.4; pointer-events: none; }
+
+/* Board */
+.unit-group { display: inline-flex; margin: 0 6px; }
+.unit-group .card { margin-left: -30px; }
+.unit-group .card:first-child { margin-left: 0; }
+.unit-group-hidden .card { margin-left: -40px; }
+.unit-group-hidden .card:first-child { margin-left: 0; }
+
+.board-row { display: flex; align-items: center; justify-content: center; min-height: 110px; flex-wrap: wrap; gap: 4px; background: rgba(0,0,0,0.12); border-radius: 10px; padding: 8px; }
+.board-side-label { font-size: 0.65rem; opacity: 0.5; text-transform: uppercase; writing-mode: vertical-lr; transform: rotate(180deg); margin: 0 4px; }
+.hand-row { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; padding: 6px 0; }
+
+/* Middle */
+#middle { display: flex; justify-content: center; align-items: center; gap: 30px; margin: 8px 0; }
+.pile { text-align: center; }
+.pile-label { font-size: 0.7rem; opacity: 0.6; margin-top: 4px; }
+
+/* Action panel */
+#actions { background: rgba(0,0,0,0.35); border-radius: 10px; padding: 10px 16px; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; min-height: 50px; }
+#actions .action-label { font-size: 0.85rem; opacity: 0.8; width: 100%; text-align: center; margin-bottom: 2px; }
+.btn { padding: 8px 18px; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+.btn:hover { transform: scale(1.04); }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: #43a047; color: #fff; }
+.btn-primary:hover { background: #388e3c; }
+.btn-secondary { background: #546e7a; color: #fff; }
+.btn-secondary:hover { background: #455a64; }
+.btn-danger { background: #c62828; color: #fff; }
+.btn-danger:hover { background: #b71c1c; }
+.btn-gold { background: #f9a825; color: #333; }
+.btn-gold:hover { background: #f57f17; }
+.btn-sm { padding: 4px 10px; font-size: 0.75rem; }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+/* Event log */
+#event-log { background: rgba(0,0,0,0.25); border-radius: 8px; padding: 8px 12px; margin-top: 10px; max-height: 100px; overflow-y: auto; font-size: 0.78rem; line-height: 1.5; }
+#event-log:empty { display: none; }
+#event-log div { opacity: 0.65; }
+#event-log div:last-child { opacity: 1; }
+
+/* --- Deploy animation --- */
+.deploy-anim-card {
+  position: fixed; z-index: 200; pointer-events: none;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.deploy-anim-card.landed { transform: scale(1) !important; }
+.deploy-landed-glow {
+  position: absolute; z-index: 49; pointer-events: none; border-radius: 10px;
+  background: radial-gradient(ellipse, rgba(67,160,71,0.5) 0%, transparent 70%);
+  animation: glowPulse 0.8s ease-out forwards;
+}
+@keyframes glowPulse { 0%{opacity:0;transform:scale(0.5)} 40%{opacity:1;transform:scale(1.2)} 100%{opacity:0;transform:scale(1.5)} }
+
+/* --- Attack flash --- */
+.attack-flash { position: absolute; z-index: 50; display: flex; gap: 6px; padding: 6px 10px; background: rgba(0,0,0,0.7); border-radius: 10px; pointer-events: none; align-items:center; }
+.attack-flash .card { width: 55px; height: 80px; font-size: 0.7rem; }
+.attack-flash .rank { font-size: 1rem; }
+.attack-flash .suit-symbol { font-size: 1.2rem; }
+.attack-flash .vs-label { color:#fff; font-weight:900; font-size:1.2rem; padding:0 8px; text-shadow:0 0 8px rgba(255,0,0,0.5); }
+.attack-flash .outcome-label { position:absolute; bottom:-22px; left:50%; transform:translateX(-50%); font-size:0.75rem; font-weight:bold; white-space:nowrap; padding:2px 8px; border-radius:6px; }
+.outcome-destroyed { background:#c62828; color:#fff; }
+.outcome-blocked { background:#1565c0; color:#fff; }
+.outcome-both { background:#e65100; color:#fff; }
+.outcome-absorbed { background:#6a1b9a; color:#fff; }
+
+/* Destroyed unit fade */
+@keyframes destroyFade { 0%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(0.5) rotate(10deg)} }
+.unit-destroying { animation: destroyFade 0.5s ease-in forwards; }
+
+/* Ace trap animation */
+.ace-trap-effect {
+  position: absolute; inset: 0; z-index: 60; pointer-events: none; border-radius: 10px;
+  background: radial-gradient(circle, rgba(106,27,154,0.8) 0%, transparent 70%);
+  animation: trapPulse 1s ease-out forwards;
+}
+@keyframes trapPulse {
+  0% { opacity:0; transform:scale(0.3); }
+  30% { opacity:1; transform:scale(1.3); }
+  60% { opacity:0.8; transform:scale(0.9); }
+  100% { opacity:0; transform:scale(1.5); }
+}
+.ace-trap-text {
+  position: absolute; z-index: 61; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  color: #ce93d8; font-weight: 900; font-size: 1rem; text-shadow: 0 0 12px rgba(156,39,176,0.8);
+  pointer-events: none; animation: trapTextPop 1s ease-out forwards; white-space: nowrap;
+}
+@keyframes trapTextPop { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.5)} 30%{opacity:1;transform:translate(-50%,-50%) scale(1.2)} 70%{opacity:1} 100%{opacity:0;transform:translate(-50%,-70%) scale(1)} }
+
+/* --- Mulligan overlay --- */
+#mulligan-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 150; flex-direction: column; align-items: center; justify-content: center; }
+#mulligan-overlay.visible { display: flex; }
+#mulligan-box { background: #1b5e20; border-radius: 16px; padding: 30px; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,0.5); max-width: 500px; }
+#mulligan-box h2 { font-size: 1.4rem; margin-bottom: 16px; }
+#mulligan-hand { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+#mulligan-buttons { display: flex; gap: 12px; justify-content: center; }
+
+/* --- Game over overlay --- */
+#gameover-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 300; flex-direction: column; align-items: center; justify-content: center; overflow-y: auto; }
+#gameover-overlay.visible { display: flex; }
+#gameover-box { background: #1b5e20; border-radius: 16px; padding: 30px 40px; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,0.5); max-width: 700px; width: 90%; }
+#gameover-box h2 { font-size: 1.8rem; margin-bottom: 16px; }
+.go-board-section { margin: 16px 0; }
+.go-board-section h3 { font-size: 1rem; margin-bottom: 8px; opacity: 0.8; }
+.go-units { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; min-height: 110px; align-items: center; }
+.go-unit { position: relative; display: inline-flex; gap: 2px; padding: 6px; border-radius: 8px; background: rgba(0,0,0,0.2); }
+.go-unit.scoring { background: rgba(255,215,0,0.25); box-shadow: 0 0 12px rgba(255,215,0,0.4); }
+.go-unit .pts-badge { position: absolute; top: -10px; right: -10px; background: #f9a825; color: #333; font-size: 0.75rem; font-weight: bold; padding: 2px 7px; border-radius: 10px; display: none; }
+.go-unit.scored .pts-badge { display: block; }
+.go-score-total { font-size: 1.5rem; font-weight: bold; margin-top: 10px; }
+@keyframes popIn { 0%{transform:scale(0)} 60%{transform:scale(1.3)} 100%{transform:scale(1)} }
+.anim-pop { animation: popIn 0.4s ease-out; }
+
+/* --- Menu --- */
+#menu { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; gap:0; }
+#menu .title { font-size:2.4rem; font-weight:900; letter-spacing:4px; margin-bottom:6px; text-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+#menu .subtitle { font-size:0.85rem; opacity:0.5; letter-spacing:1px; margin-bottom:28px; }
+.menu-btns { display:flex; flex-direction:column; gap:12px; width: 260px; }
+.menu-btns .btn { padding:14px 0; font-size:1.05rem; width:100%; text-align:center; }
+
+/* --- Waiting screen --- */
+#waiting { display:none; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; gap:16px; }
+
+/* --- Help overlay --- */
+#help-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:400; align-items:center; justify-content:center; overflow-y:auto; padding:20px; }
+#help-overlay.visible { display:flex; }
+#help-box { background:#1b5e20; border-radius:16px; padding:30px 36px; max-width:650px; width:95%; max-height:90vh; overflow-y:auto; box-shadow: 0 8px 40px rgba(0,0,0,0.5); }
+#help-box h2 { font-size:1.5rem; margin-bottom:18px; text-align:center; letter-spacing:2px; }
+.help-section { margin-bottom:18px; }
+.help-section h3 { font-size:1rem; margin-bottom:8px; color:#81c784; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:4px; }
+.help-section p, .help-section li { font-size:0.88rem; line-height:1.6; opacity:0.9; }
+.help-section ul { padding-left:20px; margin-top:4px; }
+.help-section li { margin-bottom:4px; }
+.help-table { width:100%; border-collapse:collapse; margin-top:6px; font-size:0.85rem; }
+.help-table th, .help-table td { padding:6px 10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.08); }
+.help-table th { opacity:0.6; font-size:0.75rem; text-transform:uppercase; }
+.help-close { margin-top:20px; text-align:center; }
+
+/* In-game help button */
+#ingame-help { position:fixed; top:12px; right:12px; z-index:100; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:50%; width:36px; height:36px; font-size:1.1rem; font-weight:bold; cursor:pointer; display:none; }
+#ingame-help:hover { background:rgba(0,0,0,0.6); }
+</style>
+</head>
+<body>
+
+<div id="menu">
+  <div class="title">ROYALTY HIGH</div>
+  <div class="subtitle">A strategic card game</div>
+  <div class="menu-btns">
+    <button class="btn btn-primary" onclick="startOnline()">Play Online</button>
+    <button class="btn btn-gold" onclick="startBot()">Play vs Bot</button>
+    <button class="btn btn-secondary" onclick="showHelp()">How to Play</button>
+  </div>
+</div>
+
+<div id="waiting">
+  <div style="font-size:1.2rem;">Looking for opponent<span class="spinner"></span></div>
+  <div style="margin-top:10px;opacity:0.6;font-size:0.9rem;">Share this link with a friend!</div>
+</div>
+
+<!-- In-game help button -->
+<button id="ingame-help" onclick="showHelp()">?</button>
+
+<!-- Help overlay -->
+<div id="help-overlay">
+  <div id="help-box">
+    <h2>HOW TO PLAY</h2>
+
+    <div class="help-section">
+      <h3>Overview</h3>
+      <p>Royalty High is a 2-player strategy card game. Deploy units to your board, attack your opponent's board, and protect your Royals. The player with the most Royal points at the end wins.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>The Cards</h3>
+      <table class="help-table">
+        <tr><th>Card</th><th>Type</th><th>Power</th><th>Notes</th></tr>
+        <tr><td>2 - 10</td><td>Knight</td><td>Face value</td><td>Your fighters and defenders</td></tr>
+        <tr><td>J, Q, K</td><td>Royal</td><td>None</td><td>Worth points at end of game</td></tr>
+        <tr><td>A</td><td>Ace</td><td>1</td><td>Special defender (see below)</td></tr>
+      </table>
+    </div>
+
+    <div class="help-section">
+      <h3>Setup</h3>
+      <p>Each player draws 5 cards. You may <strong>mulligan</strong> once to discard your hand and draw 5 new cards. On your first turn, you do not draw a card.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>Your Turn</h3>
+      <p>Draw 1 card from the deck (except your first turn), then choose a path:</p>
+      <ul>
+        <li><strong>Path A (default):</strong> Take 1 action</li>
+        <li><strong>Discard 2, Put 2:</strong> Discard 2 cards, then take 2 actions</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3>Actions</h3>
+      <ul>
+        <li><strong>Deploy:</strong> Place cards of the same rank face-down on the left or right side of your board. If your board has fewer than 3 units, you may keep placing more cards as part of the same action.</li>
+        <li><strong>Attack:</strong> Send cards of the same rank to attack the opponent's board from the left or right side. This always ends your turn.</li>
+        <li><strong>Pick up discard:</strong> Take the top card of the discard pile (costs 2 actions).</li>
+        <li><strong>Pass:</strong> Do nothing with your remaining action.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3>Units</h3>
+      <p>Multiple cards of the <strong>same rank</strong> deployed together form a single unit. Their power stacks (e.g., two 5s = power 10).</p>
+    </div>
+
+    <div class="help-section">
+      <h3>Attacking</h3>
+      <ul>
+        <li>Your attacker fights defenders from the chosen side (left or right) one at a time.</li>
+        <li>If attacker power &gt; defender power, the defender is destroyed and leftover power carries through to the next defender.</li>
+        <li>If attacker power &lt; defender power, the attack is blocked. Attacker is destroyed, defender survives.</li>
+        <li>If equal, both are destroyed.</li>
+        <li><strong>Royal attackers</strong> destroy one unit (regardless of power), then are destroyed themselves.</li>
+        <li><strong>Attacking a Royal defender:</strong> Both attacker and Royal are destroyed.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3>Ace (Special)</h3>
+      <p>When an Ace is defending and is attacked by a non-Royal, the attacker <strong>replaces</strong> the Ace on the board. The Ace is destroyed.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>Hand Limit</h3>
+      <p>Maximum hand size is 10 cards. If your hand exceeds 10 at the end of your turn, you must discard down to 10.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>End of Game</h3>
+      <p>When the deck runs out, players must attack each turn with whatever cards they have. When both players have no cards left, the game ends.</p>
+      <p>All board units are revealed and <strong>surviving Royals</strong> are scored:</p>
+      <table class="help-table">
+        <tr><th>Royal</th><th>Points</th></tr>
+        <tr><td>Jack (J)</td><td>1 point</td></tr>
+        <tr><td>Queen (Q)</td><td>2 points</td></tr>
+        <tr><td>King (K)</td><td>3 points</td></tr>
+      </table>
+      <p style="margin-top:8px;">The player with the most Royal points wins.</p>
+    </div>
+
+    <div class="help-close">
+      <button class="btn btn-primary" onclick="hideHelp()">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div id="game">
+  <div id="status-bar">
+    <span class="turn-indicator" id="turn-text"></span>
+    <span><span class="badge" id="phase-badge"></span> <span class="badge" id="actions-badge"></span></span>
+  </div>
+  <div class="section">
+    <div class="section-label">Opponent's hand (<span id="opp-hand-count">0</span>)</div>
+    <div class="hand-row" id="opp-hand"></div>
+  </div>
+  <div class="section">
+    <div class="section-label">Opponent's board</div>
+    <div class="board-row"><span class="board-side-label">LEFT</span><div id="opp-board" style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;flex:1;"></div><span class="board-side-label">RIGHT</span></div>
+  </div>
+  <div id="middle">
+    <div class="pile"><div class="card card-back" id="deck-card" style="display:inline-flex;"></div><div class="pile-label">Deck (<span id="deck-count">0</span>)</div></div>
+    <div class="pile"><div id="discard-card"></div><div class="pile-label">Discard (<span id="discard-count">0</span>)</div></div>
+  </div>
+  <div class="section">
+    <div class="section-label">Your board</div>
+    <div class="board-row"><span class="board-side-label">LEFT</span><div id="your-board" style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;flex:1;"></div><span class="board-side-label">RIGHT</span></div>
+  </div>
+  <div class="section">
+    <div class="section-label">Your hand</div>
+    <div class="hand-row" id="your-hand"></div>
+  </div>
+  <div id="actions"></div>
+  <div id="event-log"></div>
+</div>
+
+<!-- Mulligan overlay -->
+<div id="mulligan-overlay">
+  <div id="mulligan-box">
+    <h2>Your starting hand</h2>
+    <div id="mulligan-hand"></div>
+    <p style="opacity:0.7;margin-bottom:16px;font-size:0.9rem;">You may mulligan once to get 5 new cards.</p>
+    <div id="mulligan-buttons">
+      <button class="btn btn-primary" onclick="doMulligan(false)">Keep Hand</button>
+      <button class="btn btn-gold" onclick="doMulligan(true)">Mulligan</button>
+    </div>
+    <div id="mulligan-wait" style="display:none;margin-top:12px;opacity:0.6;">Waiting for opponent<span class="spinner"></span></div>
+  </div>
+</div>
+
+
+<!-- Game over overlay -->
+<div id="gameover-overlay">
+  <div id="gameover-box">
+    <h2 id="go-title"></h2>
+    <div class="go-board-section"><h3>Your board</h3><div class="go-units" id="go-your-board"></div><div class="go-score-total" id="go-your-score"></div></div>
+    <div class="go-board-section"><h3>Opponent's board</h3><div class="go-units" id="go-opp-board"></div><div class="go-score-total" id="go-opp-score"></div></div>
+    <button class="btn btn-primary" style="margin-top:20px;" onclick="location.reload()">Play Again</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const S = {hearts:"\u2665", diamonds:"\u2666", clubs:"\u2663", spades:"\u2660"};
+const socket = io();
+let state = null;
+let selectedIndices = [];
+
+function hideAll() {
+  document.getElementById("menu").style.display = "none";
+  document.getElementById("waiting").style.display = "none";
+  document.getElementById("game").style.display = "none";
+  document.getElementById("ingame-help").style.display = "none";
+}
+
+function startOnline() {
+  hideAll();
+  document.getElementById("waiting").style.display = "flex";
+  socket.emit("join");
+}
+
+socket.on("waiting", () => {
+  hideAll();
+  document.getElementById("waiting").style.display = "flex";
+});
+
+function startBot() {
+  hideAll();
+  socket.emit("join_bot");
+}
+
+function showHelp() { document.getElementById("help-overlay").classList.add("visible"); }
+function hideHelp() { document.getElementById("help-overlay").classList.remove("visible"); }
+
+socket.on("opponent_left", () => { alert("Opponent disconnected."); location.reload(); });
+
+socket.on("game_state", (s) => {
+  if (s.attack_anim) playAttackAnimation(s.attack_anim);
+  if (s.deploy_anim) playDeployFlash(s.deploy_anim);
+  if (s.event_logs) s.event_logs.forEach(m => addLog(m));
+  applyState(s);
+});
+
+function applyState(s) {
+  state = s;
+  hideAll();
+  document.getElementById("game").style.display = "block";
+  document.getElementById("ingame-help").style.display = "block";
+  selectedIndices = [];
+
+  if (state.phase === "mulligan") {
+    showMulligan();
+  } else {
+    document.getElementById("mulligan-overlay").classList.remove("visible");
+  }
+
+  if (state.phase === "game_over") {
+    render();
+    playEndgameAnimation();
+    return;
+  }
+  render();
+}
+
+// --- Card HTML helpers ---
+const SUIT_ICON = {hearts:"\u2665", diamonds:"\u2666", clubs:"\u2663", spades:"\u2660"};
+const ROYAL_ICONS = {
+  J: {icon: "\u2694\uFE0F", title: "Jack", bg: "\u2694"},   // Crossed swords
+  Q: {icon: "\u265B", title: "Queen", bg: "\u265B"},         // Chess queen
+  K: {icon: "\u265A", title: "King", bg: "\u265A"},          // Chess king
+};
+const KNIGHT_ICONS = ["\u2694","\u2694","\u2694","\u2694","\u2694","\u2694","\u2694","\u2694","\u2694","\u2694"]; // swords
+
+function cardHTML(card, cls) {
+  const r = card.rank, su = card.suit;
+  const extra = cls || "";
+
+  if (r === "A") {
+    return `<div class="card card-ace ${extra} ${su}">` +
+      `<div class="corner corner-tl">A<br>${SUIT_ICON[su]}</div>` +
+      `<div class="rank">A</div>` +
+      `<div class="suit-badge">${SUIT_ICON[su]}</div>` +
+      `<div class="ace-label">Trap</div>` +
+      `<div class="corner corner-br">A<br>${SUIT_ICON[su]}</div>` +
+    `</div>`;
+  }
+
+  if (r === "J" || r === "Q" || r === "K") {
+    const info = ROYAL_ICONS[r];
+    const pts = {J:1,Q:2,K:3}[r];
+    return `<div class="card card-royal ${extra} ${su}">` +
+      `<div class="corner corner-tl">${r}<br>${SUIT_ICON[su]}</div>` +
+      `<div class="royal-bg-icon">${info.bg}</div>` +
+      `<div class="royal-icon">${info.icon}</div>` +
+      `<div class="royal-rank">${info.title}</div>` +
+      `<div class="royal-title">${pts} pt${pts>1?"s":""}</div>` +
+      `<div class="corner corner-br">${r}<br>${SUIT_ICON[su]}</div>` +
+    `</div>`;
+  }
+
+  // Knight (2-10)
+  return `<div class="card card-knight ${extra} ${su}">` +
+    `<div class="corner corner-tl">${r}<br>${SUIT_ICON[su]}</div>` +
+    `<div class="card-icon">\u2694</div>` +
+    `<div class="rank">${r}</div>` +
+    `<div class="suit-badge">${SUIT_ICON[su]}</div>` +
+    `<div class="corner corner-br">${r}<br>${SUIT_ICON[su]}</div>` +
+  `</div>`;
+}
+function cardBackHTML(cls) {
+  return `<div class="card card-back ${cls||""}"></div>`;
+}
+
+// --- Mulligan ---
+function showMulligan() {
+  const ov = document.getElementById("mulligan-overlay");
+  ov.classList.add("visible");
+  const h = document.getElementById("mulligan-hand");
+  h.innerHTML = "";
+  (state.hand || []).forEach(c => { h.innerHTML += cardHTML(c); });
+  const decided = state.mulligan_waiting;
+  document.getElementById("mulligan-buttons").style.display = decided ? "none" : "flex";
+  document.getElementById("mulligan-wait").style.display = decided ? "block" : "none";
+}
+
+function doMulligan(yes) {
+  socket.emit("mulligan", {do_mulligan: yes});
+  document.getElementById("mulligan-buttons").style.display = "none";
+  document.getElementById("mulligan-wait").style.display = "block";
+}
+
+// --- Main render ---
+function render() {
+  if (!state) return;
+  const t = document.getElementById("turn-text");
+  if (state.phase === "game_over") { t.textContent = "Game Over"; t.style.color = "#fff"; }
+  else { t.textContent = state.your_turn ? "Your Turn" : "Opponent's Turn"; t.style.color = state.your_turn ? "#66bb6a" : "#ef9a9a"; }
+  document.getElementById("phase-badge").textContent = ({action:"Take Action",deploy:"Deploying",discard_for_b:"Discard 2",forced_attack:"Must Attack",turn_over:"End Turn",discard_excess:"Discard Excess",game_over:"Game Over",mulligan:"Mulligan"})[state.phase]||"";
+  document.getElementById("actions-badge").textContent = state.your_turn && state.phase==="action" ? "Actions: "+state.actions_remaining : "";
+
+  // Opponent hand
+  document.getElementById("opp-hand-count").textContent = state.opponent_hand_count;
+  const oh = document.getElementById("opp-hand"); oh.innerHTML = "";
+  for (let i=0; i<state.opponent_hand_count; i++) oh.innerHTML += '<div class="card card-back" style="width:45px;height:65px;font-size:0.8rem;"></div>';
+
+  renderBoard("opp-board", state.opponent_board, true);
+  document.getElementById("deck-card").style.display = state.deck_count > 0 ? "inline-flex" : "none";
+  document.getElementById("deck-count").textContent = state.deck_count;
+  const dc = document.getElementById("discard-card");
+  dc.innerHTML = state.discard_top ? cardHTML(state.discard_top) : '<div class="card" style="border:2px dashed rgba(255,255,255,0.2);background:transparent;"></div>';
+  document.getElementById("discard-count").textContent = state.discard_count;
+  renderBoard("your-board", state.board, false);
+  renderHand();
+  renderActions();
+}
+
+function renderBoard(id, data, isOpp) {
+  const el = document.getElementById(id); el.innerHTML = "";
+  if (!data || !data.length) { el.innerHTML = '<span style="opacity:0.3;font-size:0.8rem;">No units</span>'; return; }
+  data.forEach(u => {
+    const g = document.createElement("div");
+    g.className = isOpp && !u.revealed ? "unit-group unit-group-hidden" : "unit-group";
+    g.style.position = "relative";
+    if (isOpp && !u.revealed) { for (let j=0;j<u.card_count;j++) g.innerHTML += cardBackHTML(); }
+    else {
+      (u.cards||[]).forEach(c => g.innerHTML += cardHTML(c));
+      if (u.absorbed) {
+        g.innerHTML += `<div style="position:absolute;top:-8px;right:-8px;background:#e94560;color:#fff;font-size:0.65rem;font-weight:bold;padding:2px 6px;border-radius:10px;box-shadow:0 0 6px rgba(233,69,96,0.5);">TRAPPED</div>`;
+      }
+    }
+    el.appendChild(g);
+  });
+}
+
+function renderHand() {
+  const el = document.getElementById("your-hand"); el.innerHTML = "";
+  const hand = state.hand || [];
+  const canSel = state.your_turn && ["action","deploy","forced_attack","discard_for_b","discard_excess"].includes(state.phase);
+  hand.forEach((card,i) => {
+    const sel = selectedIndices.includes(i);
+    let dim = false;
+    if (canSel && selectedIndices.length>0 && !sel && state.phase!=="discard_for_b" && state.phase!=="discard_excess") {
+      if (card.rank !== hand[selectedIndices[0]].rank) dim = true;
+    }
+    if (state.phase==="discard_for_b" && selectedIndices.length>=2 && !sel) dim = true;
+    // Create card via cardHTML then add hand-card interactivity
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = cardHTML(card, `hand-card${sel?" selected":""}${dim?" dimmed":""}`);
+    const div = wrapper.firstElementChild;
+    if (canSel && !dim) div.onclick = () => { const x=selectedIndices.indexOf(i); x>=0?selectedIndices.splice(x,1):selectedIndices.push(i); renderHand(); renderActions(); };
+    el.appendChild(div);
+  });
+}
+
+function renderActions() {
+  const el = document.getElementById("actions"); el.innerHTML = "";
+  if (!state || state.phase==="mulligan" || state.phase==="game_over") return;
+  if (!state.your_turn) { el.innerHTML='<div class="action-label" style="opacity:0.5">Waiting for opponent...</div>'; return; }
+  const av = state.available_actions, hs = selectedIndices.length > 0;
+
+  if (av.includes("discard")) {
+    el.innerHTML=`<div class="action-label">Select 2 cards to discard (${selectedIndices.length}/2)</div>`;
+    addBtn(el,"Discard Selected","btn btn-danger",()=>socket.emit("discard_cards",{indices:selectedIndices}),selectedIndices.length!==2);
+    return;
+  }
+
+  const forced = state.phase==="forced_attack", deploying = state.phase==="deploy";
+  if (forced) el.innerHTML='<div class="action-label">Deck empty — you must attack!</div>';
+  else if (deploying) el.innerHTML='<div class="action-label">Deploy more units or finish</div>';
+  else el.innerHTML=`<div class="action-label">Take an action (${state.actions_remaining} left)</div>`;
+
+  if (av.includes("deploy") && hs) {
+    addBtn(el,"Deploy Left","btn btn-primary",()=>socket.emit("deploy",{card_indices:selectedIndices,side:"left"}));
+    addBtn(el,"Deploy Right","btn btn-primary",()=>socket.emit("deploy",{card_indices:selectedIndices,side:"right"}));
+  }
+  if (av.includes("attack") && hs) {
+    addBtn(el,"Attack Left","btn btn-danger",()=>socket.emit("attack",{card_indices:selectedIndices,side:"left"}));
+    addBtn(el,"Attack Right","btn btn-danger",()=>socket.emit("attack",{card_indices:selectedIndices,side:"right"}));
+  }
+  if (!hs && (av.includes("deploy")||av.includes("attack"))) {
+    const h=document.createElement("div"); h.style.cssText="font-size:0.8rem;opacity:0.5;width:100%;text-align:center;"; h.textContent="Select cards from your hand"; el.appendChild(h);
+  }
+  if (av.includes("finish_deploy")) addBtn(el,"Done Deploying","btn btn-secondary",()=>socket.emit("finish_deploy"));
+  if (av.includes("pick_discard")) addBtn(el,"Pick Up Discard (2 actions)","btn btn-gold",()=>socket.emit("pick_discard"));
+  if (av.includes("pass")) addBtn(el,"Pass","btn btn-secondary",()=>socket.emit("pass_action"));
+  if (av.includes("switch_path_b")) addBtn(el,"Discard 2, Put 2","btn btn-sm btn-secondary",()=>socket.emit("switch_to_path_b"), !state.can_path_b);
+
+  if (av.includes("discard_excess")) {
+    const excess = state.hand.length - 10;
+    el.innerHTML = `<div class="action-label">Hand over 10 — discard ${excess} card${excess>1?"s":""} (${selectedIndices.length}/${excess} selected)</div>`;
+    addBtn(el, "Discard Selected", "btn btn-danger", () => socket.emit("discard_excess", {indices: selectedIndices}), selectedIndices.length < 1);
+    return;
+  }
+
+  if (av.includes("end_turn")) {
+    el.innerHTML = '<div class="action-label">Action complete</div>';
+    addBtn(el, "End Turn", "btn btn-primary", () => socket.emit("end_turn"));
+  }
+}
+
+function addBtn(parent, text, cls, fn, disabled) {
+  const b=document.createElement("button"); b.className=cls; b.textContent=text; b.onclick=fn;
+  if (disabled) b.disabled=true;
+  parent.appendChild(b);
+}
+
+// --- Event log ---
+let eventLog = [];
+function addLog(msg) {
+  eventLog.push(msg);
+  if (eventLog.length > 20) eventLog.shift();
+  renderLog();
+}
+function renderLog() {
+  const el = document.getElementById("event-log");
+  el.innerHTML = eventLog.map(m => `<div>${m}</div>`).join("");
+  el.scrollTop = el.scrollHeight;
+}
+
+// --- Attack animation ---
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function finishAnimation() {
+  document.querySelectorAll(".attack-flash").forEach(e => e.remove());
+}
+
+function atkLabel(unit) {
+  if (unit.is_royal) return unit.rank;
+  const n = unit.cards.length;
+  return n > 1 ? `${unit.rank}x${n} (${unit.power})` : `${unit.rank}`;
+}
+function defLabel(unit) {
+  if (unit.is_royal) return unit.rank + " (Royal)";
+  const n = unit.cards.length;
+  return n > 1 ? `${unit.rank}x${n} (${unit.power})` : `${unit.rank}`;
+}
+
+function smallCardHTML(card) {
+  // Reuse cardHTML but make it smaller via wrapper
+  const html = cardHTML(card);
+  return html.replace('class="card ', 'class="card sm-card ');
+}
+
+function playDeployFlash(deploy) {
+  const isMe = deploy.player === state.player_number;
+  const boardEl = document.getElementById(isMe ? "your-board" : "opp-board");
+  const handEl = document.getElementById(isMe ? "your-hand" : "opp-hand");
+  const boardRect = boardEl.getBoundingClientRect();
+
+  // Create a card-back that flies from hand area to the board
+  const flyCard = document.createElement("div");
+  flyCard.className = "card card-back deploy-anim-card";
+  flyCard.style.width = "68px";
+  flyCard.style.height = "98px";
+
+  // Start position: from hand area
+  const handRect = handEl.getBoundingClientRect();
+  const startX = handRect.left + handRect.width / 2 - 34;
+  const startY = isMe ? handRect.top : handRect.bottom;
+  flyCard.style.left = startX + "px";
+  flyCard.style.top = startY + "px";
+  flyCard.style.transform = "scale(0.6)";
+  flyCard.style.opacity = "0.8";
+  document.body.appendChild(flyCard);
+
+  // Target: board side
+  const targetX = deploy.side === "left" ? boardRect.left + 20 : boardRect.right - 88;
+  const targetY = boardRect.top + boardRect.height / 2 - 49;
+
+  requestAnimationFrame(() => {
+    flyCard.style.left = targetX + "px";
+    flyCard.style.top = targetY + "px";
+    flyCard.style.transform = "scale(1)";
+    flyCard.style.opacity = "1";
+  });
+
+  setTimeout(() => {
+    flyCard.remove();
+    // Add landing glow on board
+    boardEl.parentElement.style.position = "relative";
+    const glow = document.createElement("div");
+    glow.className = "deploy-landed-glow";
+    glow.style.width = "100px";
+    glow.style.height = "100px";
+    if (deploy.side === "left") { glow.style.left = "10px"; glow.style.top = "5px"; }
+    else { glow.style.right = "10px"; glow.style.top = "5px"; }
+    boardEl.parentElement.appendChild(glow);
+    setTimeout(() => glow.remove(), 800);
+  }, 520);
+}
+
+function playAttackAnimation(anim) {
+  document.querySelectorAll(".attack-flash").forEach(e => e.remove());
+  const steps = anim.steps.filter(s => s.defender);
+  const isMeAttacking = anim.attacker_player === state.player_number;
+  const defBoardEl = document.getElementById(isMeAttacking ? "opp-board" : "your-board");
+  const STEP_MS = 1800;
+
+  const atkName = atkLabel(anim.attacker);
+  if (!steps.length) { addLog(`${atkName} attacks ${anim.side} — no target`); return; }
+
+  let stepIdx = 0;
+  function showStep() {
+    document.querySelectorAll(".attack-flash").forEach(e => e.remove());
+    if (stepIdx >= steps.length) return;
+
+    const step = steps[stepIdx];
+    const dName = defLabel(step.defender);
+
+    // Log this step
+    if (step.outcome === "destroyed") addLog(`${atkName} destroys ${dName}` + (step.remaining_power > 0 ? ` (${step.remaining_power} carries)` : ""));
+    else if (step.outcome === "blocked") addLog(`${atkName} blocked by ${dName}`);
+    else if (step.outcome === "both_destroyed") addLog(`${atkName} and ${dName} both destroyed`);
+    else if (step.outcome === "absorbed") addLog(`Ace traps ${atkName}!`);
+
+    const flash = document.createElement("div");
+    flash.className = "attack-flash";
+    flash.style.position = "absolute";
+
+    // Attacker cards
+    anim.attacker.cards.forEach(c => flash.innerHTML += smallCardHTML(c));
+    flash.innerHTML += '<div class="vs-label">VS</div>';
+    step.defender.cards.forEach(c => flash.innerHTML += smallCardHTML(c));
+
+    // Outcome label
+    const outcomeEl = document.createElement("div");
+    outcomeEl.className = "outcome-label";
+    if (step.outcome === "destroyed") { outcomeEl.className += " outcome-destroyed"; outcomeEl.textContent = step.remaining_power > 0 ? `DESTROYED (+${step.remaining_power} carry)` : "DESTROYED"; }
+    else if (step.outcome === "blocked") { outcomeEl.className += " outcome-blocked"; outcomeEl.textContent = "BLOCKED"; }
+    else if (step.outcome === "both_destroyed") { outcomeEl.className += " outcome-both"; outcomeEl.textContent = "MUTUAL DESTRUCTION"; }
+    else if (step.outcome === "absorbed") { outcomeEl.className += " outcome-absorbed"; outcomeEl.textContent = "TRAPPED BY ACE"; }
+    flash.appendChild(outcomeEl);
+
+    if (anim.side === "left") { flash.style.left = "0"; flash.style.top = "50%"; flash.style.transform = "translateY(-50%)"; }
+    else { flash.style.right = "0"; flash.style.top = "50%"; flash.style.transform = "translateY(-50%)"; }
+
+    defBoardEl.parentElement.style.position = "relative";
+    defBoardEl.parentElement.appendChild(flash);
+
+    // Ace trap effect
+    if (step.outcome === "absorbed") {
+      const trapFx = document.createElement("div");
+      trapFx.className = "ace-trap-effect";
+      defBoardEl.parentElement.appendChild(trapFx);
+      const trapText = document.createElement("div");
+      trapText.className = "ace-trap-text";
+      trapText.textContent = "ACE TRAP";
+      defBoardEl.parentElement.appendChild(trapText);
+      setTimeout(() => { trapFx.remove(); trapText.remove(); }, 1200);
+    }
+
+    stepIdx++;
+    if (stepIdx < steps.length) {
+      setTimeout(showStep, STEP_MS);
+    } else {
+      setTimeout(() => finishAnimation(), STEP_MS);
+    }
+  }
+  showStep();
+}
+
+// --- Endgame animation ---
+async function playEndgameAnimation() {
+  await sleep(600);
+  const ov = document.getElementById("gameover-overlay");
+  const yourBoard = document.getElementById("go-your-board");
+  const oppBoard = document.getElementById("go-opp-board");
+  yourBoard.innerHTML = ""; oppBoard.innerHTML = "";
+
+  const yourReveal = state.your_board_reveal || [];
+  const oppReveal = state.opp_board_reveal || [];
+
+  // Build unit elements (initially as card backs)
+  const yourUnits = buildRevealUnits(yourReveal, yourBoard);
+  const oppUnits = buildRevealUnits(oppReveal, oppBoard);
+
+  document.getElementById("go-title").textContent = "Revealing boards...";
+  document.getElementById("go-your-score").textContent = "";
+  document.getElementById("go-opp-score").textContent = "";
+  ov.classList.add("visible");
+
+  await sleep(800);
+
+  // Reveal your board one by one
+  for (let i = 0; i < yourUnits.length; i++) {
+    revealUnit(yourUnits[i], yourReveal[i]);
+    await sleep(600);
+  }
+  await sleep(400);
+
+  // Reveal opponent board one by one
+  for (let i = 0; i < oppUnits.length; i++) {
+    revealUnit(oppUnits[i], oppReveal[i]);
+    await sleep(600);
+  }
+  await sleep(600);
+
+  // Now score royals one by one
+  document.getElementById("go-title").textContent = "Scoring royals...";
+  await sleep(500);
+
+  let yourTotal = 0;
+  for (let i = 0; i < yourUnits.length; i++) {
+    const pts = yourReveal[i].points;
+    if (pts > 0) {
+      yourUnits[i].el.classList.add("scoring");
+      await sleep(300);
+      yourUnits[i].el.classList.add("scored");
+      yourUnits[i].badge.textContent = "+" + pts;
+      yourUnits[i].badge.style.display = "block";
+      yourUnits[i].badge.classList.add("anim-pop");
+      yourTotal += pts;
+      document.getElementById("go-your-score").textContent = "Your score: " + yourTotal;
+      await sleep(700);
+    }
+  }
+  if (yourTotal === 0) document.getElementById("go-your-score").textContent = "Your score: 0";
+
+  let oppTotal = 0;
+  for (let i = 0; i < oppUnits.length; i++) {
+    const pts = oppReveal[i].points;
+    if (pts > 0) {
+      oppUnits[i].el.classList.add("scoring");
+      await sleep(300);
+      oppUnits[i].el.classList.add("scored");
+      oppUnits[i].badge.textContent = "+" + pts;
+      oppUnits[i].badge.style.display = "block";
+      oppUnits[i].badge.classList.add("anim-pop");
+      oppTotal += pts;
+      document.getElementById("go-opp-score").textContent = "Opponent's score: " + oppTotal;
+      await sleep(700);
+    }
+  }
+  if (oppTotal === 0) document.getElementById("go-opp-score").textContent = "Opponent's score: 0";
+
+  await sleep(800);
+
+  // Final result
+  if (yourTotal > oppTotal) document.getElementById("go-title").textContent = "You Win!";
+  else if (oppTotal > yourTotal) document.getElementById("go-title").textContent = "You Lose";
+  else document.getElementById("go-title").textContent = "It's a Tie!";
+
+  document.getElementById("go-title").classList.add("anim-pop");
+}
+
+function buildRevealUnits(revealData, container) {
+  const units = [];
+  revealData.forEach(u => {
+    const el = document.createElement("div");
+    el.className = "go-unit";
+    const badge = document.createElement("div");
+    badge.className = "pts-badge";
+    el.appendChild(badge);
+    // Start as card backs
+    u.cards.forEach(() => { el.innerHTML += '<div class="card card-back" style="width:55px;height:80px;"></div>'; });
+    el.appendChild(badge); // re-append badge after innerHTML
+    container.appendChild(el);
+    units.push({el, badge, data: u});
+  });
+  return units;
+}
+
+function revealUnit(unitObj, data) {
+  const el = unitObj.el;
+  const badge = unitObj.badge;
+  el.innerHTML = "";
+  data.cards.forEach(c => {
+    el.innerHTML += smallCardHTML(c);
+  });
+  el.appendChild(badge);
+}
+</script>
+</body>
+</html>
