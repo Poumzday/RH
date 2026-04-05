@@ -186,7 +186,45 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .sm-card .ace-label { display: none; }
 .sm-card .corner { font-size: 0.4rem !important; }
 .sm-card .card-icon { font-size: 1.2rem !important; }
-.sm-card .suit-badge { font-size: 0.55rem !important; }
+.sm-card .knight-label { display: none; }
+
+/* --- Drop zones --- */
+.drop-zone {
+  position: absolute; top: 0; bottom: 0; width: 50%; z-index: 40;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px; cursor: pointer; transition: all 0.2s;
+  font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+  opacity: 0; pointer-events: none;
+}
+.drop-zone.visible { opacity: 1; pointer-events: auto; }
+.drop-zone-left { left: 0; border-right: 1px dashed rgba(255,255,255,0.15); }
+.drop-zone-right { right: 0; border-left: 1px dashed rgba(255,255,255,0.15); }
+.drop-zone-deploy { background: rgba(67,160,71,0.15); color: #66bb6a; }
+.drop-zone-deploy:hover, .drop-zone-deploy.drag-over { background: rgba(67,160,71,0.35); box-shadow: inset 0 0 20px rgba(67,160,71,0.3); }
+.drop-zone-attack { background: rgba(198,40,40,0.15); color: #ef5350; }
+.drop-zone-attack:hover, .drop-zone-attack.drag-over { background: rgba(198,40,40,0.35); box-shadow: inset 0 0 20px rgba(198,40,40,0.3); }
+
+/* --- Auto-end turn flash --- */
+.auto-end-flash {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  z-index: 500; font-size: 2rem; font-weight: 900; letter-spacing: 4px;
+  color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.4);
+  background: rgba(0,0,0,0.6); padding: 16px 40px; border-radius: 16px;
+  animation: autoEndPop 0.5s ease-out forwards; pointer-events: none;
+}
+@keyframes autoEndPop { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.7)} 30%{opacity:1;transform:translate(-50%,-50%) scale(1.05)} 70%{opacity:1} 100%{opacity:0;transform:translate(-50%,-50%) scale(1)} }
+
+/* --- Error toast --- */
+.error-toast {
+  position: fixed; bottom: 20%; left: 50%; transform: translateX(-50%);
+  z-index: 500; background: rgba(198,40,40,0.9); color: #fff;
+  padding: 8px 20px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+  animation: toastPop 1.5s ease-out forwards; pointer-events: none;
+}
+@keyframes toastPop { 0%{opacity:0;transform:translateX(-50%) translateY(10px)} 15%{opacity:1;transform:translateX(-50%) translateY(0)} 70%{opacity:1} 100%{opacity:0} }
+
+/* --- Wide board when many units --- */
+.board-row.board-wide { max-width: 100vw; min-width: 800px; }
 
 /* Selectable hand cards */
 .hand-card { cursor: pointer; }
@@ -457,7 +495,10 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
   </div>
   <div class="section">
     <div class="section-label">Opponent's board</div>
-    <div class="board-row"><span class="board-side-label">LEFT</span><div id="opp-board" style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;flex:1;"></div><span class="board-side-label">RIGHT</span></div>
+    <div class="board-row" id="opp-board-row" style="position:relative;"><span class="board-side-label">LEFT</span><div id="opp-board" style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;flex:1;"></div><span class="board-side-label">RIGHT</span>
+      <div class="drop-zone drop-zone-left drop-zone-attack" id="dz-atk-left">Attack Left</div>
+      <div class="drop-zone drop-zone-right drop-zone-attack" id="dz-atk-right">Attack Right</div>
+    </div>
   </div>
   <div id="middle">
     <div class="pile"><div class="card card-back" id="deck-card" style="display:inline-flex;"></div><div class="pile-label">Deck (<span id="deck-count">0</span>)</div></div>
@@ -465,7 +506,10 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
   </div>
   <div class="section">
     <div class="section-label">Your board</div>
-    <div class="board-row"><span class="board-side-label">LEFT</span><div id="your-board" style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;flex:1;"></div><span class="board-side-label">RIGHT</span></div>
+    <div class="board-row" id="your-board-row" style="position:relative;"><span class="board-side-label">LEFT</span><div id="your-board" style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;flex:1;"></div><span class="board-side-label">RIGHT</span>
+      <div class="drop-zone drop-zone-left drop-zone-deploy" id="dz-dep-left">Deploy Left</div>
+      <div class="drop-zone drop-zone-right drop-zone-deploy" id="dz-dep-right">Deploy Right</div>
+    </div>
   </div>
   <div class="section">
     <div class="section-label">Your hand</div>
@@ -506,6 +550,7 @@ const S = {hearts:"\u2665", diamonds:"\u2666", clubs:"\u2663", spades:"\u2660"};
 const socket = io();
 let state = null;
 let selectedIndices = [];
+document.addEventListener("DOMContentLoaded", setupDropZones);
 
 function hideAll() {
   document.getElementById("menu").style.display = "none";
@@ -651,6 +696,7 @@ function render() {
   dc.innerHTML = state.discard_top ? cardHTML(state.discard_top) : '<div class="card" style="border:2px dashed rgba(255,255,255,0.2);background:transparent;"></div>';
   document.getElementById("discard-count").textContent = state.discard_count;
   renderBoard("your-board", state.board, false);
+  updateBoardWidth();
   renderHand();
   renderActions();
 }
@@ -680,51 +726,76 @@ function renderHand() {
   hand.forEach((card,i) => {
     const sel = selectedIndices.includes(i);
     let dim = false;
-    if (canSel && selectedIndices.length>0 && !sel && state.phase!=="discard_for_b" && state.phase!=="discard_excess") {
-      if (card.rank !== hand[selectedIndices[0]].rank) dim = true;
-    }
+    // Only dim for discard_for_b (must pick exactly 2)
     if (state.phase==="discard_for_b" && selectedIndices.length>=2 && !sel) dim = true;
-    // Create card via cardHTML then add hand-card interactivity
     const wrapper = document.createElement("div");
     wrapper.innerHTML = cardHTML(card, `hand-card${sel?" selected":""}${dim?" dimmed":""}`);
     const div = wrapper.firstElementChild;
-    if (canSel && !dim) div.onclick = () => { const x=selectedIndices.indexOf(i); x>=0?selectedIndices.splice(x,1):selectedIndices.push(i); renderHand(); renderActions(); };
+    if (canSel && !dim) {
+      div.onclick = () => { const x=selectedIndices.indexOf(i); x>=0?selectedIndices.splice(x,1):selectedIndices.push(i); renderHand(); renderActions(); };
+      // Drag support
+      div.draggable = true;
+      div.ondragstart = (e) => {
+        if (!sel) { selectedIndices.push(i); renderHand(); renderActions(); }
+        e.dataTransfer.setData("text/plain", "cards");
+        e.dataTransfer.effectAllowed = "move";
+      };
+    }
     el.appendChild(div);
   });
 }
 
+function showToast(msg) {
+  const t = document.createElement("div");
+  t.className = "error-toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 1500);
+}
+
+function validateSameRank() {
+  if (selectedIndices.length === 0) return false;
+  const hand = state.hand;
+  const rank = hand[selectedIndices[0]].rank;
+  if (!selectedIndices.every(i => hand[i].rank === rank)) {
+    showToast("Selected cards must be the same rank!");
+    return false;
+  }
+  return true;
+}
+
+function doAction(type, side) {
+  if (!validateSameRank()) return;
+  if (type === "deploy") socket.emit("deploy", {card_indices: selectedIndices, side});
+  else if (type === "attack") socket.emit("attack", {card_indices: selectedIndices, side});
+}
+
+function hideAllDropZones() {
+  document.querySelectorAll(".drop-zone").forEach(z => z.classList.remove("visible", "drag-over"));
+}
+
 function renderActions() {
   const el = document.getElementById("actions"); el.innerHTML = "";
+  hideAllDropZones();
   if (!state || state.phase==="mulligan" || state.phase==="game_over") return;
   if (!state.your_turn) { el.innerHTML='<div class="action-label" style="opacity:0.5">Waiting for opponent...</div>'; return; }
   const av = state.available_actions, hs = selectedIndices.length > 0;
+
+  // Auto-end turn
+  if (av.includes("end_turn")) {
+    const flash = document.createElement("div");
+    flash.className = "auto-end-flash";
+    flash.textContent = "END TURN";
+    document.body.appendChild(flash);
+    setTimeout(() => { flash.remove(); socket.emit("end_turn"); }, 550);
+    return;
+  }
 
   if (av.includes("discard")) {
     el.innerHTML=`<div class="action-label">Select 2 cards to discard (${selectedIndices.length}/2)</div>`;
     addBtn(el,"Discard Selected","btn btn-danger",()=>socket.emit("discard_cards",{indices:selectedIndices}),selectedIndices.length!==2);
     return;
   }
-
-  const forced = state.phase==="forced_attack", deploying = state.phase==="deploy";
-  if (forced) el.innerHTML='<div class="action-label">Deck empty — you must attack!</div>';
-  else if (deploying) el.innerHTML='<div class="action-label">Deploy more units or finish</div>';
-  else el.innerHTML=`<div class="action-label">Take an action (${state.actions_remaining} left)</div>`;
-
-  if (av.includes("deploy") && hs) {
-    addBtn(el,"Deploy Left","btn btn-primary",()=>socket.emit("deploy",{card_indices:selectedIndices,side:"left"}));
-    addBtn(el,"Deploy Right","btn btn-primary",()=>socket.emit("deploy",{card_indices:selectedIndices,side:"right"}));
-  }
-  if (av.includes("attack") && hs) {
-    addBtn(el,"Attack Left","btn btn-danger",()=>socket.emit("attack",{card_indices:selectedIndices,side:"left"}));
-    addBtn(el,"Attack Right","btn btn-danger",()=>socket.emit("attack",{card_indices:selectedIndices,side:"right"}));
-  }
-  if (!hs && (av.includes("deploy")||av.includes("attack"))) {
-    const h=document.createElement("div"); h.style.cssText="font-size:0.8rem;opacity:0.5;width:100%;text-align:center;"; h.textContent="Select cards from your hand"; el.appendChild(h);
-  }
-  if (av.includes("finish_deploy")) addBtn(el,"Done Deploying","btn btn-secondary",()=>socket.emit("finish_deploy"));
-  if (av.includes("pick_discard")) addBtn(el,"Pick Up Discard (2 actions)","btn btn-gold",()=>socket.emit("pick_discard"));
-  if (av.includes("pass")) addBtn(el,"Pass","btn btn-secondary",()=>socket.emit("pass_action"));
-  if (av.includes("switch_path_b")) addBtn(el,"Discard 2, Put 2","btn btn-sm btn-secondary",()=>socket.emit("switch_to_path_b"), !state.can_path_b);
 
   if (av.includes("discard_excess")) {
     const excess = state.hand.length - 10;
@@ -733,16 +804,59 @@ function renderActions() {
     return;
   }
 
-  if (av.includes("end_turn")) {
-    el.innerHTML = '<div class="action-label">Action complete</div>';
-    addBtn(el, "End Turn", "btn btn-primary", () => socket.emit("end_turn"));
+  const forced = state.phase==="forced_attack", deploying = state.phase==="deploy";
+  if (forced) el.innerHTML='<div class="action-label">Deck empty — you must attack!</div>';
+  else if (deploying) el.innerHTML='<div class="action-label">Deploy more units or finish</div>';
+  else el.innerHTML=`<div class="action-label">Take an action (${state.actions_remaining} left)</div>`;
+
+  // Show drop zones when cards are selected
+  if (hs && av.includes("deploy")) {
+    document.getElementById("dz-dep-left").classList.add("visible");
+    document.getElementById("dz-dep-right").classList.add("visible");
   }
+  if (hs && av.includes("attack")) {
+    document.getElementById("dz-atk-left").classList.add("visible");
+    document.getElementById("dz-atk-right").classList.add("visible");
+  }
+
+  if (!hs && (av.includes("deploy")||av.includes("attack"))) {
+    const h=document.createElement("div"); h.style.cssText="font-size:0.8rem;opacity:0.5;width:100%;text-align:center;"; h.textContent="Select cards, then drag or click a zone on the board"; el.appendChild(h);
+  }
+  if (av.includes("finish_deploy")) addBtn(el,"Done Deploying","btn btn-secondary",()=>socket.emit("finish_deploy"));
+  if (av.includes("pick_discard")) addBtn(el,"Pick Up Discard (2 actions)","btn btn-gold",()=>socket.emit("pick_discard"));
+  if (av.includes("pass")) addBtn(el,"Pass","btn btn-secondary",()=>socket.emit("pass_action"));
+  if (av.includes("switch_path_b")) addBtn(el,"Discard 2, Put 2","btn btn-sm btn-secondary",()=>socket.emit("switch_to_path_b"), !state.can_path_b);
 }
 
 function addBtn(parent, text, cls, fn, disabled) {
   const b=document.createElement("button"); b.className=cls; b.textContent=text; b.onclick=fn;
   if (disabled) b.disabled=true;
   parent.appendChild(b);
+}
+
+// --- Drop zone click + drag handlers ---
+function setupDropZones() {
+  const zones = [
+    {id: "dz-dep-left", action: "deploy", side: "left"},
+    {id: "dz-dep-right", action: "deploy", side: "right"},
+    {id: "dz-atk-left", action: "attack", side: "left"},
+    {id: "dz-atk-right", action: "attack", side: "right"},
+  ];
+  zones.forEach(z => {
+    const el = document.getElementById(z.id);
+    el.onclick = () => { if (el.classList.contains("visible")) doAction(z.action, z.side); };
+    el.ondragover = (e) => { e.preventDefault(); el.classList.add("drag-over"); };
+    el.ondragleave = () => { el.classList.remove("drag-over"); };
+    el.ondrop = (e) => { e.preventDefault(); el.classList.remove("drag-over"); if (el.classList.contains("visible")) doAction(z.action, z.side); };
+  });
+}
+
+// --- Board widening ---
+function updateBoardWidth() {
+  const yourCount = (state.board || []).reduce((s,u) => s + u.cards.length, 0);
+  const oppCount = (state.opponent_board || []).reduce((s,u) => s + (u.cards ? u.cards.length : u.card_count), 0);
+  document.getElementById("your-board-row").classList.toggle("board-wide", yourCount >= 8);
+  document.getElementById("opp-board-row").classList.toggle("board-wide", oppCount >= 8);
 }
 
 // --- Event log ---
