@@ -351,8 +351,16 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .menu-btns { display:flex; flex-direction:column; gap:12px; width: 260px; }
 .menu-btns .btn { padding:14px 0; font-size:1.05rem; width:100%; text-align:center; }
 
-/* --- Waiting screen --- */
-#waiting { display:none; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; gap:16px; }
+/* --- Room / Waiting screens --- */
+.room-screen { display:none; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; gap:16px; }
+.room-screen.visible { display:flex; }
+.room-box { background:rgba(0,0,0,0.3); border-radius:16px; padding:30px 36px; text-align:center; max-width:400px; width:90%; }
+.room-box h2 { font-size:1.3rem; margin-bottom:16px; }
+.room-code-display { font-size:2.6rem; font-weight:900; letter-spacing:10px; background:rgba(0,0,0,0.3); border-radius:12px; padding:16px 24px; margin:12px 0; font-family:monospace; }
+.room-input { background:rgba(255,255,255,0.12); border:2px solid rgba(255,255,255,0.25); border-radius:10px; color:#fff; font-size:1.4rem; letter-spacing:6px; text-align:center; padding:12px 18px; width:180px; text-transform:uppercase; font-weight:bold; font-family:monospace; outline:none; }
+.room-input:focus { border-color:#43a047; }
+.room-input::placeholder { opacity:0.3; letter-spacing:2px; font-size:1rem; }
+.room-error { color:#ef5350; font-size:0.85rem; margin-top:8px; min-height:1.2em; }
 
 /* --- Help overlay --- */
 #help-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:400; align-items:center; justify-content:center; overflow-y:auto; padding:20px; }
@@ -380,15 +388,34 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
   <div class="title">ROYALTY HIGH</div>
   <div class="subtitle">A strategic card game</div>
   <div class="menu-btns">
-    <button class="btn btn-primary" onclick="startOnline()">Play Online</button>
+    <button class="btn btn-primary" onclick="showRoomScreen()">Play Online</button>
     <button class="btn btn-gold" onclick="startBot()">Play vs Bot</button>
     <button class="btn btn-secondary" onclick="showHelp()">How to Play</button>
   </div>
 </div>
 
-<div id="waiting">
-  <div style="font-size:1.2rem;">Looking for opponent<span class="spinner"></span></div>
-  <div style="margin-top:10px;opacity:0.6;font-size:0.9rem;">Share this link with a friend!</div>
+<div id="room-screen" class="room-screen">
+  <div class="room-box">
+    <h2>Play Online</h2>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+      <button class="btn btn-primary" style="padding:12px;font-size:1rem;" onclick="createRoom()">Create Room</button>
+      <div style="opacity:0.4;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;">or join a room</div>
+      <input class="room-input" id="join-code-input" placeholder="CODE" maxlength="4" onkeydown="if(event.key==='Enter')joinRoom()">
+      <button class="btn btn-gold" style="padding:10px;font-size:0.95rem;" onclick="joinRoom()">Join Room</button>
+      <div class="room-error" id="join-error"></div>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="backToMenu()">Back</button>
+  </div>
+</div>
+
+<div id="waiting" class="room-screen">
+  <div class="room-box">
+    <h2>Waiting for Opponent</h2>
+    <p style="opacity:0.6;font-size:0.9rem;margin-bottom:12px;">Share this code with your friend:</p>
+    <div class="room-code-display" id="room-code-display">----</div>
+    <div style="margin-top:12px;"><span class="spinner"></span></div>
+    <button class="btn btn-secondary btn-sm" style="margin-top:18px;" onclick="location.reload()">Cancel</button>
+  </div>
 </div>
 
 <!-- In-game help button -->
@@ -555,20 +582,43 @@ document.addEventListener("DOMContentLoaded", setupDropZones);
 
 function hideAll() {
   document.getElementById("menu").style.display = "none";
-  document.getElementById("waiting").style.display = "none";
+  document.getElementById("room-screen").classList.remove("visible");
+  document.getElementById("waiting").classList.remove("visible");
   document.getElementById("game").style.display = "none";
   document.getElementById("ingame-help").style.display = "none";
 }
 
-function startOnline() {
+function backToMenu() {
   hideAll();
-  document.getElementById("waiting").style.display = "flex";
-  socket.emit("join");
+  document.getElementById("menu").style.display = "flex";
 }
 
-socket.on("waiting", () => {
+function showRoomScreen() {
   hideAll();
-  document.getElementById("waiting").style.display = "flex";
+  document.getElementById("room-screen").classList.add("visible");
+  document.getElementById("join-error").textContent = "";
+  document.getElementById("join-code-input").value = "";
+}
+
+function createRoom() {
+  socket.emit("create_room");
+}
+
+function joinRoom() {
+  const code = document.getElementById("join-code-input").value.trim();
+  if (!code) { document.getElementById("join-error").textContent = "Enter a room code"; return; }
+  document.getElementById("join-error").textContent = "";
+  socket.emit("join_room_code", {code});
+}
+
+socket.on("room_created", (data) => {
+  hideAll();
+  document.getElementById("waiting").classList.add("visible");
+  document.getElementById("room-code-display").textContent = data.room_code;
+});
+
+socket.on("join_error", (data) => {
+  document.getElementById("join-error").textContent = data.msg;
 });
 
 function startBot() {

@@ -831,7 +831,12 @@ def schedule_bot(game):
 # --- Server state ---
 games = {}
 player_game = {}
-waiting_game = None
+rooms = {}  # room_code -> game_id
+
+
+def generate_room_code():
+    chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return "".join(random.choice(chars) for _ in range(4))
 
 
 def broadcast_state(game):
@@ -861,26 +866,43 @@ def index():
     return render_template("index.html")
 
 
-@socketio.on("join")
-def on_join():
-    global waiting_game
+@socketio.on("create_room")
+def on_create_room():
     sid = request.sid
-    if waiting_game and waiting_game in games and len(games[waiting_game].players) < 2:
-        game = games[waiting_game]
-        game.add_player(sid)
-        join_room(game.id)
-        player_game[sid] = game.id
-        waiting_game = None
-        broadcast_state(game)
-    else:
-        game_id = str(uuid.uuid4())[:8]
-        game = Game(game_id)
-        game.add_player(sid)
-        games[game_id] = game
-        join_room(game.id)
-        player_game[sid] = game_id
-        waiting_game = game_id
-        socketio.emit("waiting", {"game_id": game_id}, to=sid)
+    code = generate_room_code()
+    while code in rooms:
+        code = generate_room_code()
+    game_id = str(uuid.uuid4())[:8]
+    game = Game(game_id)
+    game.add_player(sid)
+    games[game_id] = game
+    rooms[code] = game_id
+    join_room(game.id)
+    player_game[sid] = game_id
+    socketio.emit("room_created", {"room_code": code}, to=sid)
+
+
+@socketio.on("join_room_code")
+def on_join_room(data):
+    sid = request.sid
+    code = (data.get("code") or "").strip().upper()
+    if code not in rooms:
+        socketio.emit("join_error", {"msg": "Room not found"}, to=sid)
+        return
+    game_id = rooms[code]
+    if game_id not in games:
+        del rooms[code]
+        socketio.emit("join_error", {"msg": "Room expired"}, to=sid)
+        return
+    game = games[game_id]
+    if len(game.players) >= 2:
+        socketio.emit("join_error", {"msg": "Room is full"}, to=sid)
+        return
+    game.add_player(sid)
+    join_room(game.id)
+    player_game[sid] = game_id
+    del rooms[code]
+    broadcast_state(game)
 
 
 @socketio.on("join_bot")
@@ -999,7 +1021,6 @@ def on_discard_excess(data):
 
 @socketio.on("disconnect")
 def on_disconnect():
-    global waiting_game
     sid = request.sid
     game_id = player_game.pop(sid, None)
     if not game_id or game_id not in games:
@@ -1009,9 +1030,10 @@ def on_disconnect():
         for p in game.players:
             if p != sid and p != BOT_SID:
                 socketio.emit("opponent_left", to=p)
+        to_del = [c for c, gid in rooms.items() if gid == game_id]
+        for c in to_del:
+            del rooms[c]
         del games[game_id]
-        if waiting_game == game_id:
-            waiting_game = None
 
 
 if __name__ == "__main__":
