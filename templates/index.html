@@ -575,10 +575,12 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
 <script>
 const S = {hearts:"\u2665", diamonds:"\u2666", clubs:"\u2663", spades:"\u2660"};
-const socket = io();
+const socket = io({transports: ["websocket", "polling"]});
 let state = null;
 let selectedIndices = [];
 document.addEventListener("DOMContentLoaded", setupDropZones);
+socket.on("connect", () => console.log("Connected:", socket.id));
+socket.on("connect_error", (e) => console.error("Socket error:", e));
 
 function hideAll() {
   document.getElementById("menu").style.display = "none";

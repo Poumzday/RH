@@ -7,7 +7,8 @@ from flask_socketio import SocketIO, emit, join_room
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
-socketio = SocketIO(app, async_mode="eventlet")
+async_mode = "eventlet" if os.environ.get("RENDER") else "threading"
+socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins="*")
 
 KNIGHT_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 BOT_SID = "__bot__"
