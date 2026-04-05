@@ -585,7 +585,9 @@ socket.on("connect_error", (e) => console.error("Socket error:", e));
 function hideAll() {
   document.getElementById("menu").style.display = "none";
   document.getElementById("room-screen").classList.remove("visible");
+  document.getElementById("room-screen").style.display = "none";
   document.getElementById("waiting").classList.remove("visible");
+  document.getElementById("waiting").style.display = "none";
   document.getElementById("game").style.display = "none";
   document.getElementById("ingame-help").style.display = "none";
 }
@@ -597,7 +599,9 @@ function backToMenu() {
 
 function showRoomScreen() {
   hideAll();
-  document.getElementById("room-screen").classList.add("visible");
+  const el = document.getElementById("room-screen");
+  el.style.display = "flex";
+  el.classList.add("visible");
   document.getElementById("join-error").textContent = "";
   document.getElementById("join-code-input").value = "";
 }
@@ -615,7 +619,9 @@ function joinRoom() {
 
 socket.on("room_created", (data) => {
   hideAll();
-  document.getElementById("waiting").classList.add("visible");
+  const el = document.getElementById("waiting");
+  el.style.display = "flex";
+  el.classList.add("visible");
   document.getElementById("room-code-display").textContent = data.room_code;
 });
 
