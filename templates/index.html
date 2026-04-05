@@ -32,35 +32,24 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 /* --- Cards --- */
 .card { width: 68px; height: 98px; border-radius: 8px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; position: relative; transition: transform 0.15s, box-shadow 0.15s; flex-shrink: 0; cursor: default; overflow: hidden; }
 
-/* --- Knight cards (A, 2-10) --- */
+/* --- Knight cards (2-10) --- */
 .card-knight {
   background: linear-gradient(160deg, #2c3e50 0%, #1a252f 50%, #2c3e50 100%);
   border: 2px solid #4a6274;
   box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
-  color: #c0cdd8;
+  color: #b0bec5;
 }
 .card-knight::before {
   content: ""; position: absolute; inset: 3px; border: 1px solid rgba(255,255,255,0.08); border-radius: 5px; pointer-events: none;
 }
-.card-knight .card-icon { font-size: 1.6rem; opacity: 0.2; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
-.card-knight .rank { font-size: 1.5rem; font-weight: 900; z-index: 1; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
-.card-knight .suit-badge { font-size: 0.7rem; z-index: 1; margin-top: -2px; }
-.card-knight .power-num { position: absolute; bottom: 4px; right: 6px; font-size: 0.6rem; opacity: 0.5; z-index: 1; }
-.card-knight .corner { position: absolute; font-size: 0.5rem; line-height: 1; z-index: 1; }
+.card-knight .card-icon { font-size: 1.6rem; opacity: 0.15; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+.card-knight .rank { font-size: 1.5rem; font-weight: 900; z-index: 1; text-shadow: 0 1px 3px rgba(0,0,0,0.5); color: #cfd8dc; }
+.card-knight .knight-label { font-size: 0.4rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.4; z-index: 1; margin-top: 2px; }
+.card-knight .corner { position: absolute; font-size: 0.5rem; line-height: 1; z-index: 1; color: #90a4ae; }
 .card-knight .corner-tl { top: 3px; left: 4px; }
 .card-knight .corner-br { bottom: 3px; right: 4px; transform: rotate(180deg); }
 
-/* Knight suit color accents */
-.card-knight.hearts { border-color: #8b3a3a; }
-.card-knight.hearts .rank, .card-knight.hearts .suit-badge { color: #e57373; }
-.card-knight.diamonds { border-color: #8b6914; }
-.card-knight.diamonds .rank, .card-knight.diamonds .suit-badge { color: #ffb74d; }
-.card-knight.clubs { border-color: #2e7d32; }
-.card-knight.clubs .rank, .card-knight.clubs .suit-badge { color: #81c784; }
-.card-knight.spades { border-color: #4a4a7a; }
-.card-knight.spades .rank, .card-knight.spades .suit-badge { color: #9fa8da; }
-
-/* --- Ace card (special) --- */
+/* --- Ace card (special trap) --- */
 .card-ace {
   background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   border: 2px solid #e94560;
@@ -70,17 +59,14 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .card-ace::before {
   content: ""; position: absolute; inset: 3px; border: 1px solid rgba(233,69,96,0.2); border-radius: 5px; pointer-events: none;
 }
-.card-ace::after {
-  content: "\1F6E1"; position: absolute; font-size: 2.2rem; opacity: 0.1; top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none;
-}
+.card-ace .card-icon { font-size: 1.6rem; opacity: 0.15; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; }
 .card-ace .rank { font-size: 1.6rem; font-weight: 900; z-index: 1; text-shadow: 0 0 8px rgba(233,69,96,0.4); }
-.card-ace .suit-badge { font-size: 0.7rem; z-index: 1; }
 .card-ace .ace-label { font-size: 0.45rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.6; z-index: 1; margin-top: 2px; }
 .card-ace .corner { position: absolute; font-size: 0.5rem; line-height: 1; z-index: 1; color: #e94560; }
 .card-ace .corner-tl { top: 3px; left: 4px; }
 .card-ace .corner-br { bottom: 3px; right: 4px; transform: rotate(180deg); }
 
-/* --- Royal cards (J/Q/K) --- */
+/* --- Royal cards (J/Q/K) — base --- */
 .card-royal {
   border: 2px solid;
   box-shadow: 0 2px 10px rgba(0,0,0,0.4);
@@ -96,49 +82,96 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .card-royal .corner-tl { top: 3px; left: 4px; }
 .card-royal .corner-br { bottom: 3px; right: 4px; transform: rotate(180deg); }
 .card-royal .royal-bg-icon { position: absolute; font-size: 3.5rem; opacity: 0.08; top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; }
-
-/* Royal — Hearts (Crimson/Rose Gold) */
-.card-royal.hearts {
-  background: linear-gradient(160deg, #4a1028 0%, #6b1535 30%, #8b1a42 60%, #4a1028 100%);
-  border-color: #d4a07a;
-  box-shadow: 0 2px 12px rgba(139,26,66,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
-}
-.card-royal.hearts .royal-icon, .card-royal.hearts .corner { color: #f8bbd0; }
-.card-royal.hearts .royal-rank { color: #d4a07a; }
-
-/* Royal — Diamonds (Gold/Amber) */
-.card-royal.diamonds {
-  background: linear-gradient(160deg, #3e2723 0%, #5d4037 30%, #6d4c2a 60%, #3e2723 100%);
-  border-color: #ffd54f;
-  box-shadow: 0 2px 12px rgba(255,213,79,0.25), inset 0 1px 0 rgba(255,255,255,0.1);
-}
-.card-royal.diamonds .royal-icon, .card-royal.diamonds .corner { color: #fff176; }
-.card-royal.diamonds .royal-rank { color: #ffd54f; }
-
-/* Royal — Clubs (Emerald/Silver) */
-.card-royal.clubs {
-  background: linear-gradient(160deg, #0d2818 0%, #1b4332 30%, #2d6a4f 60%, #0d2818 100%);
-  border-color: #a8dadc;
-  box-shadow: 0 2px 12px rgba(45,106,79,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
-}
-.card-royal.clubs .royal-icon, .card-royal.clubs .corner { color: #b2dfdb; }
-.card-royal.clubs .royal-rank { color: #a8dadc; }
-
-/* Royal — Spades (Deep Purple/Silver) */
-.card-royal.spades {
-  background: linear-gradient(160deg, #1a0a2e 0%, #2d1b4e 30%, #4a2c6e 60%, #1a0a2e 100%);
-  border-color: #b39ddb;
-  box-shadow: 0 2px 12px rgba(74,44,110,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
-}
-.card-royal.spades .royal-icon, .card-royal.spades .corner { color: #ce93d8; }
-.card-royal.spades .royal-rank { color: #b39ddb; }
-
-/* Royal shimmer effect */
 .card-royal::after {
   content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-  background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.03) 50%, transparent 60%);
+  background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.04) 50%, transparent 60%);
   pointer-events: none; z-index: 2;
 }
+
+/* --- 12 unique royal styles --- */
+.card-royal.rs-crimson {
+  background: linear-gradient(160deg, #4a1028 0%, #8b1a42 50%, #4a1028 100%);
+  border-color: #d4a07a;
+}
+.card-royal.rs-crimson .royal-icon, .card-royal.rs-crimson .corner { color: #f8bbd0; }
+.card-royal.rs-crimson .royal-rank { color: #d4a07a; }
+
+.card-royal.rs-purple {
+  background: linear-gradient(160deg, #1a0a2e 0%, #4a2c6e 50%, #1a0a2e 100%);
+  border-color: #b39ddb;
+}
+.card-royal.rs-purple .royal-icon, .card-royal.rs-purple .corner { color: #ce93d8; }
+.card-royal.rs-purple .royal-rank { color: #b39ddb; }
+
+.card-royal.rs-emerald {
+  background: linear-gradient(160deg, #0d2818 0%, #2d6a4f 50%, #0d2818 100%);
+  border-color: #a8dadc;
+}
+.card-royal.rs-emerald .royal-icon, .card-royal.rs-emerald .corner { color: #b2dfdb; }
+.card-royal.rs-emerald .royal-rank { color: #a8dadc; }
+
+.card-royal.rs-sapphire {
+  background: linear-gradient(160deg, #0d1b2a 0%, #1b3a5c 50%, #0d1b2a 100%);
+  border-color: #64b5f6;
+}
+.card-royal.rs-sapphire .royal-icon, .card-royal.rs-sapphire .corner { color: #90caf9; }
+.card-royal.rs-sapphire .royal-rank { color: #64b5f6; }
+
+.card-royal.rs-obsidian {
+  background: linear-gradient(160deg, #1a1a1a 0%, #333 50%, #1a1a1a 100%);
+  border-color: #ef5350;
+}
+.card-royal.rs-obsidian .royal-icon, .card-royal.rs-obsidian .corner { color: #ef9a9a; }
+.card-royal.rs-obsidian .royal-rank { color: #ef5350; }
+
+.card-royal.rs-rose {
+  background: linear-gradient(160deg, #3e1929 0%, #6d2b4b 50%, #3e1929 100%);
+  border-color: #f48fb1;
+}
+.card-royal.rs-rose .royal-icon, .card-royal.rs-rose .corner { color: #f8bbd0; }
+.card-royal.rs-rose .royal-rank { color: #f48fb1; }
+
+.card-royal.rs-teal {
+  background: linear-gradient(160deg, #0a2626 0%, #1a5c5c 50%, #0a2626 100%);
+  border-color: #80cbc4;
+}
+.card-royal.rs-teal .royal-icon, .card-royal.rs-teal .corner { color: #b2dfdb; }
+.card-royal.rs-teal .royal-rank { color: #80cbc4; }
+
+.card-royal.rs-midnight {
+  background: linear-gradient(160deg, #0a0a2a 0%, #1a1a5c 50%, #0a0a2a 100%);
+  border-color: #ffd54f;
+}
+.card-royal.rs-midnight .royal-icon, .card-royal.rs-midnight .corner { color: #fff59d; }
+.card-royal.rs-midnight .royal-rank { color: #ffd54f; }
+
+.card-royal.rs-forest {
+  background: linear-gradient(160deg, #1b2e1b 0%, #2e5a2e 50%, #1b2e1b 100%);
+  border-color: #aed581;
+}
+.card-royal.rs-forest .royal-icon, .card-royal.rs-forest .corner { color: #c5e1a5; }
+.card-royal.rs-forest .royal-rank { color: #aed581; }
+
+.card-royal.rs-burgundy {
+  background: linear-gradient(160deg, #2a0a0a 0%, #5c1a1a 50%, #2a0a0a 100%);
+  border-color: #e0e0e0;
+}
+.card-royal.rs-burgundy .royal-icon, .card-royal.rs-burgundy .corner { color: #eeeeee; }
+.card-royal.rs-burgundy .royal-rank { color: #e0e0e0; }
+
+.card-royal.rs-amber {
+  background: linear-gradient(160deg, #3e2723 0%, #6d4c2a 50%, #3e2723 100%);
+  border-color: #ffb74d;
+}
+.card-royal.rs-amber .royal-icon, .card-royal.rs-amber .corner { color: #ffe0b2; }
+.card-royal.rs-amber .royal-rank { color: #ffb74d; }
+
+.card-royal.rs-violet {
+  background: linear-gradient(160deg, #2a0a3e 0%, #5c1a8a 50%, #2a0a3e 100%);
+  border-color: #ea80fc;
+}
+.card-royal.rs-violet .royal-icon, .card-royal.rs-violet .corner { color: #f3c0ff; }
+.card-royal.rs-violet .royal-rank { color: #ea80fc; }
 
 .card-back { background: linear-gradient(135deg, #1a237e 0%, #283593 40%, #1a237e 60%, #303f9f 100%); border: 2px solid #5c6bc0; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
 .card-back::before { content: ""; position: absolute; inset: 5px; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; }
@@ -336,10 +369,11 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
       <h3>The Cards</h3>
       <table class="help-table">
         <tr><th>Card</th><th>Type</th><th>Power</th><th>Notes</th></tr>
-        <tr><td>2 - 10</td><td>Knight</td><td>Face value</td><td>Your fighters and defenders</td></tr>
-        <tr><td>J, Q, K</td><td>Royal</td><td>None</td><td>Worth points at end of game</td></tr>
-        <tr><td>A</td><td>Ace</td><td>1</td><td>Special defender (see below)</td></tr>
+        <tr><td>2 - 10</td><td>Knight</td><td>Face value</td><td>Your fighters and defenders (no suits)</td></tr>
+        <tr><td>J, Q, K</td><td>Royal</td><td>None</td><td>Worth points — each has a unique color</td></tr>
+        <tr><td>A</td><td>Ace</td><td>1</td><td>Special trap defender (see below)</td></tr>
       </table>
+      <p style="margin-top:6px;font-size:0.8rem;opacity:0.7;">Each game has a random mix of Royals (J=1pt, Q=2pts, K=3pts) that always totals 12 points.</p>
     </div>
 
     <div class="help-section">
@@ -530,48 +564,48 @@ function applyState(s) {
 }
 
 // --- Card HTML helpers ---
-const SUIT_ICON = {hearts:"\u2665", diamonds:"\u2666", clubs:"\u2663", spades:"\u2660"};
 const ROYAL_ICONS = {
-  J: {icon: "\u2694\uFE0F", title: "Jack", bg: "\u2694"},   // Crossed swords
-  Q: {icon: "\u265B", title: "Queen", bg: "\u265B"},         // Chess queen
-  K: {icon: "\u265A", title: "King", bg: "\u265A"},          // Chess king
+  J: {icon: "\u2694\uFE0F", title: "Jack", bg: "\u2694"},
+  Q: {icon: "\u265B", title: "Queen", bg: "\u265B"},
+  K: {icon: "\u265A", title: "King", bg: "\u265A"},
 };
-const KNIGHT_ICONS = ["\u2694","\u2694","\u2694","\u2694","\u2694","\u2694","\u2694","\u2694","\u2694","\u2694"]; // swords
 
 function cardHTML(card, cls) {
-  const r = card.rank, su = card.suit;
+  const r = card.rank;
   const extra = cls || "";
+  const style = card.style || "";
 
   if (r === "A") {
-    return `<div class="card card-ace ${extra} ${su}">` +
-      `<div class="corner corner-tl">A<br>${SUIT_ICON[su]}</div>` +
+    return `<div class="card card-ace ${extra}">` +
+      `<div class="corner corner-tl">A</div>` +
+      `<div class="card-icon">\u26A0</div>` +
       `<div class="rank">A</div>` +
-      `<div class="suit-badge">${SUIT_ICON[su]}</div>` +
       `<div class="ace-label">Trap</div>` +
-      `<div class="corner corner-br">A<br>${SUIT_ICON[su]}</div>` +
+      `<div class="corner corner-br">A</div>` +
     `</div>`;
   }
 
   if (r === "J" || r === "Q" || r === "K") {
     const info = ROYAL_ICONS[r];
     const pts = {J:1,Q:2,K:3}[r];
-    return `<div class="card card-royal ${extra} ${su}">` +
-      `<div class="corner corner-tl">${r}<br>${SUIT_ICON[su]}</div>` +
+    const sc = style ? "rs-" + style : "rs-crimson";
+    return `<div class="card card-royal ${extra} ${sc}">` +
+      `<div class="corner corner-tl">${r}</div>` +
       `<div class="royal-bg-icon">${info.bg}</div>` +
       `<div class="royal-icon">${info.icon}</div>` +
       `<div class="royal-rank">${info.title}</div>` +
       `<div class="royal-title">${pts} pt${pts>1?"s":""}</div>` +
-      `<div class="corner corner-br">${r}<br>${SUIT_ICON[su]}</div>` +
+      `<div class="corner corner-br">${r}</div>` +
     `</div>`;
   }
 
-  // Knight (2-10)
-  return `<div class="card card-knight ${extra} ${su}">` +
-    `<div class="corner corner-tl">${r}<br>${SUIT_ICON[su]}</div>` +
+  // Knight (2-10) — no suit
+  return `<div class="card card-knight ${extra}">` +
+    `<div class="corner corner-tl">${r}</div>` +
     `<div class="card-icon">\u2694</div>` +
     `<div class="rank">${r}</div>` +
-    `<div class="suit-badge">${SUIT_ICON[su]}</div>` +
-    `<div class="corner corner-br">${r}<br>${SUIT_ICON[su]}</div>` +
+    `<div class="knight-label">Knight</div>` +
+    `<div class="corner corner-br">${r}</div>` +
   `</div>`;
 }
 function cardBackHTML(cls) {

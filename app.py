@@ -9,9 +9,23 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
 socketio = SocketIO(app, async_mode="eventlet")
 
-SUITS = ["hearts", "diamonds", "clubs", "spades"]
-RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
+KNIGHT_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 BOT_SID = "__bot__"
+
+# All valid (j, q, k) counts where j*1 + q*2 + k*3 = 12, total 4-12 royals
+ROYAL_COMBOS = []
+for _j in range(0, 13):
+    for _q in range(0, 7):
+        for _k in range(0, 5):
+            if _j * 1 + _q * 2 + _k * 3 == 12 and 4 <= _j + _q + _k <= 12:
+                ROYAL_COMBOS.append((_j, _q, _k))
+
+# 12 unique royal visual styles
+ROYAL_STYLES = [
+    "crimson", "purple", "emerald", "sapphire",
+    "obsidian", "rose", "teal", "midnight",
+    "forest", "burgundy", "amber", "violet",
+]
 
 
 def card_value(rank):
@@ -31,7 +45,25 @@ def royal_points(rank):
 
 
 def make_deck():
-    deck = [{"rank": r, "suit": s} for s in SUITS for r in RANKS]
+    deck = []
+    # Knights: 4 copies of each rank, no suits
+    for r in KNIGHT_RANKS:
+        for _ in range(4):
+            deck.append({"rank": r, "suit": "none"})
+    # Royals: random combo summing to 12 points, each with unique style
+    j_count, q_count, k_count = random.choice(ROYAL_COMBOS)
+    styles = list(ROYAL_STYLES)
+    random.shuffle(styles)
+    style_idx = 0
+    for _ in range(j_count):
+        deck.append({"rank": "J", "suit": "none", "style": styles[style_idx % len(styles)]})
+        style_idx += 1
+    for _ in range(q_count):
+        deck.append({"rank": "Q", "suit": "none", "style": styles[style_idx % len(styles)]})
+        style_idx += 1
+    for _ in range(k_count):
+        deck.append({"rank": "K", "suit": "none", "style": styles[style_idx % len(styles)]})
+        style_idx += 1
     random.shuffle(deck)
     return deck
 
@@ -47,12 +79,13 @@ def make_unit(cards):
 
 
 def unit_to_dict(unit):
-    return {
+    d = {
         "cards": unit["cards"],
         "rank": unit["rank"],
         "is_royal": unit["is_royal"],
         "power": unit["power"],
     }
+    return d
 
 
 def resolve_attack(attacker_unit, board, side):
