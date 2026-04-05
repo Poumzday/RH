@@ -266,10 +266,11 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
 /* Event log */
-#event-log { background: rgba(0,0,0,0.25); border-radius: 8px; padding: 8px 12px; margin-top: 10px; max-height: 100px; overflow-y: auto; font-size: 0.78rem; line-height: 1.5; }
+#event-log { background: rgba(0,0,0,0.25); border-radius: 8px; padding: 8px 12px; margin-top: 10px; max-height: 120px; overflow-y: auto; font-size: 0.78rem; line-height: 1.5; }
 #event-log:empty { display: none; }
 #event-log div { opacity: 0.65; }
 #event-log div:last-child { opacity: 1; }
+#event-log .log-turn-sep { opacity: 0.9; color: #ffd54f; font-weight: 700; font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; border-top: 1px solid rgba(255,215,79,0.25); margin-top: 4px; padding-top: 4px; }
 
 /* --- Deploy animation --- */
 .deploy-anim-card {
@@ -587,7 +588,16 @@ socket.on("game_state", (s) => {
   applyState(s);
 });
 
+let lastPlayerNumber = null;
 function applyState(s) {
+  // Detect turn change and add separator
+  if (state && s.phase !== "mulligan" && s.phase !== "game_over") {
+    const prevYourTurn = state.your_turn;
+    if (prevYourTurn !== s.your_turn) {
+      const who = s.your_turn ? "Your turn" : "Opponent's turn";
+      addTurnSeparator(who);
+    }
+  }
   state = s;
   hideAll();
   document.getElementById("game").style.display = "block";
@@ -859,16 +869,31 @@ function updateBoardWidth() {
   document.getElementById("opp-board-row").classList.toggle("board-wide", oppCount >= 8);
 }
 
-// --- Event log ---
-let eventLog = [];
+// --- Event log (tracks turns, shows last 2) ---
+let logTurns = [[]]; // array of turns, each turn is array of messages
 function addLog(msg) {
-  eventLog.push(msg);
-  if (eventLog.length > 20) eventLog.shift();
+  logTurns[logTurns.length - 1].push(msg);
+  renderLog();
+}
+function addTurnSeparator(label) {
+  logTurns.push([]);
+  // Keep only last 2 turns + current
+  if (logTurns.length > 3) logTurns.splice(0, logTurns.length - 3);
+  logTurns[logTurns.length - 1].push({sep: label});
   renderLog();
 }
 function renderLog() {
   const el = document.getElementById("event-log");
-  el.innerHTML = eventLog.map(m => `<div>${m}</div>`).join("");
+  // Show last 2 turns
+  const show = logTurns.slice(-2);
+  let html = "";
+  for (const turn of show) {
+    for (const m of turn) {
+      if (m && m.sep) html += `<div class="log-turn-sep">${m.sep}</div>`;
+      else html += `<div>${m}</div>`;
+    }
+  }
+  el.innerHTML = html;
   el.scrollTop = el.scrollHeight;
 }
 
