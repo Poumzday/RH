@@ -13,13 +13,17 @@ socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins="*")
 KNIGHT_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 BOT_SID = "__bot__"
 
-# All valid (j, q, k) counts where j*1 + q*2 + k*3 = 12, total 4-12 royals
-ROYAL_COMBOS = []
-for _j in range(0, 13):
-    for _q in range(0, 7):
-        for _k in range(0, 5):
-            if _j * 1 + _q * 2 + _k * 3 == 12 and 4 <= _j + _q + _k <= 12:
-                ROYAL_COMBOS.append((_j, _q, _k))
+def random_royal_counts():
+    """Random J/Q/K counts summing to 12 points. J=1, Q=2, K=3."""
+    j = random.randint(0, 8)
+    remaining = 12 - j
+    max_q = min(8, remaining // 2)
+    q = random.randint(0, max_q)
+    remaining -= q * 2
+    if remaining % 3 != 0 or remaining // 3 > 8:
+        return random_royal_counts()  # retry
+    k = remaining // 3
+    return j, q, k
 
 # 12 unique royal visual styles
 ROYAL_STYLES = [
@@ -52,7 +56,7 @@ def make_deck():
         for _ in range(4):
             deck.append({"rank": r, "suit": "none"})
     # Royals: random combo summing to 12 points, each with unique style
-    j_count, q_count, k_count = random.choice(ROYAL_COMBOS)
+    j_count, q_count, k_count = random_royal_counts()
     styles = list(ROYAL_STYLES)
     random.shuffle(styles)
     style_idx = 0
