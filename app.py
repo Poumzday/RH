@@ -96,9 +96,22 @@ def resolve_attack(attacker_unit, board, side):
         board = list(reversed(board))
 
     if attacker_unit["is_royal"]:
-        to_discard.extend(attacker_unit["cards"])
-        if board:
+        if board and board[0]["rank"] == "A":
+            # Ace traps the royal — royal replaces ace on board
+            defender = board[0]
+            to_discard.extend(defender["cards"])
+            new_unit = make_unit(attacker_unit["cards"])
+            board[0] = new_unit
+            new_unit["absorbed"] = new_unit["power"]
+            steps.append({
+                "defender": unit_to_dict(defender),
+                "outcome": "absorbed",
+                "remaining_power": 0,
+                "absorbed_power": 0,
+            })
+        elif board:
             victim = board.pop(0)
+            to_discard.extend(attacker_unit["cards"])
             to_discard.extend(victim["cards"])
             steps.append({
                 "defender": unit_to_dict(victim),
@@ -106,6 +119,7 @@ def resolve_attack(attacker_unit, board, side):
                 "remaining_power": 0,
             })
         else:
+            to_discard.extend(attacker_unit["cards"])
             steps.append({"defender": None, "outcome": "no_target", "remaining_power": 0})
     else:
         remaining = attacker_unit["power"]
