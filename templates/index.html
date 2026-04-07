@@ -368,11 +368,55 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .anim-pop { animation: popIn 0.4s ease-out; }
 
 /* --- Menu --- */
-#menu { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; gap:0; }
-#menu .title { font-size:2.4rem; font-weight:900; letter-spacing:4px; margin-bottom:6px; text-shadow: 0 2px 12px rgba(0,0,0,0.4); }
-#menu .subtitle { font-size:0.85rem; opacity:0.5; letter-spacing:1px; margin-bottom:28px; }
-.menu-btns { display:flex; flex-direction:column; gap:12px; width: 260px; }
-.menu-btns .btn { padding:14px 0; font-size:1.05rem; width:100%; text-align:center; }
+body.on-menu {
+  background:
+    radial-gradient(ellipse at top, #1f5c2d 0%, #0d3818 60%, #051f0c 100%);
+}
+#menu { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:90vh; gap:0; position:relative; z-index:2; }
+#menu .crown {
+  font-size: 3rem; margin-bottom: 8px; filter: drop-shadow(0 0 14px rgba(255,215,0,0.55));
+  animation: crownFloat 3.5s ease-in-out infinite;
+}
+@keyframes crownFloat { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+#menu .title {
+  font-size: 3.4rem; font-weight: 900; letter-spacing: 6px; margin-bottom: 4px;
+  background: linear-gradient(180deg, #fff7cc 0%, #ffd700 45%, #b88a2a 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  text-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  font-family: 'Cinzel', 'Trajan Pro', Georgia, serif;
+}
+#menu .subtitle {
+  font-size: 0.85rem; opacity: 0.65; letter-spacing: 4px; margin-bottom: 20px;
+  text-transform: uppercase; color: #d4c19a;
+}
+#menu .crests {
+  display: flex; gap: 20px; margin-bottom: 26px; opacity: 0.55; font-size: 1.4rem;
+  color: #d4a07a;
+}
+.menu-btns { display:flex; flex-direction:column; gap:14px; width: 280px; }
+.menu-btns .btn {
+  padding: 14px 0; font-size: 1rem; width: 100%; text-align: center;
+  letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+  border: 2px solid rgba(255,255,255,0.15); box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+}
+.menu-btns .btn-primary {
+  background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
+  border-color: rgba(255,215,0,0.4);
+}
+.menu-btns .btn-secondary {
+  background: linear-gradient(180deg, #546e7a 0%, #37474f 100%);
+  border-color: rgba(255,255,255,0.2);
+}
+/* Decorative floating cards */
+.menu-deco {
+  position: fixed; pointer-events: none; opacity: 0.10; font-size: 6rem;
+  color: #ffd700; z-index: 1; user-select: none;
+}
+.menu-deco-1 { top: 8%; left: 6%; transform: rotate(-15deg); animation: floatDeco 7s ease-in-out infinite; }
+.menu-deco-2 { top: 12%; right: 7%; transform: rotate(18deg); animation: floatDeco 8s ease-in-out infinite reverse; }
+.menu-deco-3 { bottom: 10%; left: 9%; transform: rotate(8deg); animation: floatDeco 9s ease-in-out infinite; }
+.menu-deco-4 { bottom: 14%; right: 8%; transform: rotate(-10deg); animation: floatDeco 6.5s ease-in-out infinite reverse; }
+@keyframes floatDeco { 0%,100% { transform: translateY(0) rotate(var(--r,0)) } 50% { transform: translateY(-12px) rotate(var(--r,0)) } }
 
 /* --- Room / Waiting screens --- */
 .room-screen { display:none; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; gap:16px; }
@@ -399,6 +443,48 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .help-table th, .help-table td { padding:6px 10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.08); }
 .help-table th { opacity:0.6; font-size:0.75rem; text-transform:uppercase; }
 .help-close { margin-top:20px; text-align:center; }
+/* Interactive examples */
+.example-demo {
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 12px; margin: 10px 0;
+}
+.example-title { font-size: 0.8rem; font-weight: 700; color: #ffd54f; margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
+.example-desc { font-size: 0.78rem; opacity: 0.8; margin-bottom: 10px; }
+.demo-stage {
+  position: relative; min-height: 130px; display: flex; align-items: center;
+  justify-content: center; gap: 18px; padding: 8px;
+  background: rgba(0,0,0,0.25); border-radius: 8px; overflow: hidden;
+}
+.demo-side-label {
+  position: absolute; top: 6px; font-size: 0.6rem; opacity: 0.5;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.demo-side-label.demo-atk { left: 12px; color: #66bb6a; }
+.demo-side-label.demo-def { right: 12px; color: #ef9a9a; }
+.demo-card-slot { position: relative; transition: transform 0.6s ease, opacity 0.5s; }
+.demo-card-slot.attacking { transform: translateX(60px) scale(1.08); }
+.demo-card-slot.recoil { transform: translateX(0); }
+.demo-card-slot.dying { opacity: 0; transform: scale(0.4) rotate(20deg); }
+.demo-card-slot.hidden { opacity: 0; }
+.demo-vs { font-size: 1.1rem; font-weight: 900; color: #ef5350; opacity: 0.7; }
+.demo-vs.gone { opacity: 0; }
+.demo-result {
+  position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+  font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 6px;
+  white-space: nowrap; opacity: 0; transition: opacity 0.3s;
+}
+.demo-result.show { opacity: 1; }
+.demo-result.win { background: #2e7d32; color: #fff; }
+.demo-result.loss { background: #c62828; color: #fff; }
+.demo-result.tie { background: #e65100; color: #fff; }
+.demo-result.trap { background: #6a1b9a; color: #fff; }
+.demo-controls { display: flex; justify-content: center; margin-top: 8px; }
+.demo-play-btn {
+  background: #f9a825; color: #333; border: none; padding: 5px 14px;
+  border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;
+  letter-spacing: 1px; text-transform: uppercase;
+}
+.demo-play-btn:hover { background: #f57f17; }
 
 /* In-game help button */
 #ingame-help { position:fixed; top:12px; right:12px; z-index:100; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:50%; width:36px; height:36px; font-size:1.1rem; font-weight:bold; cursor:pointer; display:none; }
@@ -407,12 +493,18 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 </head>
 <body>
 
+<div class="menu-deco menu-deco-1">♔</div>
+<div class="menu-deco menu-deco-2">♕</div>
+<div class="menu-deco menu-deco-3">♖</div>
+<div class="menu-deco menu-deco-4">♗</div>
+
 <div id="menu">
+  <div class="crown">♛</div>
   <div class="title">ROYALTY HIGH</div>
-  <div class="subtitle">A strategic card game</div>
+  <div class="subtitle">A Game of Strategy and Crowns</div>
+  <div class="crests">⚔ ♕ ♔ ♕ ⚔</div>
   <div class="menu-btns">
     <button class="btn btn-primary" onclick="showRoomScreen()">Play Online</button>
-    <button class="btn btn-gold" onclick="startBot()">Play vs Bot</button>
     <button class="btn btn-secondary" onclick="showHelp()">How to Play</button>
   </div>
 </div>
@@ -450,95 +542,172 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
     <h2>HOW TO PLAY</h2>
 
     <div class="help-section">
-      <h3>Overview</h3>
-      <p>Royalty High is a 2-player strategy card game. Deploy units to your board, attack your opponent's board, and protect your Royals. The player with the most Royal points at the end wins.</p>
+      <h3>The Goal</h3>
+      <p>Royalty High is a 2-player card game. Deploy units to your board, raid the opponent's board, and try to keep your Royals (J/Q/K) alive on your side until the deck runs out. <strong>The player with the most Royal points on their board at the end wins.</strong></p>
     </div>
 
     <div class="help-section">
-      <h3>The Cards</h3>
-      <table class="help-table">
-        <tr><th>Card</th><th>Type</th><th>Power</th><th>Notes</th></tr>
-        <tr><td>2 - 10</td><td>Knight</td><td>Face value</td><td>Your fighters and defenders (no suits)</td></tr>
-        <tr><td>J, Q, K</td><td>Royal</td><td>None</td><td>Worth points — each has a unique color</td></tr>
-        <tr><td>A</td><td>Ace</td><td>1</td><td>Special trap defender (see below)</td></tr>
-        <tr><td>Joker</td><td>Wild</td><td>Varies</td><td>2 pts alone; pairs with any card (see below)</td></tr>
+      <h3>The Deck (54 cards)</h3>
+      <ul>
+        <li><strong>40 Knights</strong> — four copies each of A, 2, 3, 4, 5, 6, 7, 8, 9, 10. No suits.</li>
+        <li><strong>12 Royals</strong> — a random mix of Jacks, Queens, and Kings (always 12 total, but the J/Q/K split changes every game).</li>
+        <li><strong>2 Jokers</strong> — wild cards.</li>
+      </ul>
+      <table class="help-table" style="margin-top:8px;">
+        <tr><th>Card</th><th>Combat power</th><th>End-game points</th></tr>
+        <tr><td>2 – 10</td><td>Face value</td><td>0</td></tr>
+        <tr><td>Ace (A)</td><td>1 (but trap — see below)</td><td>0</td></tr>
+        <tr><td>Jack (J)</td><td>None (Royal)</td><td>1</td></tr>
+        <tr><td>Queen (Q)</td><td>None (Royal)</td><td>2</td></tr>
+        <tr><td>King (K)</td><td>None (Royal)</td><td>3</td></tr>
+        <tr><td>Joker</td><td>Wild — see below</td><td>2 (always)</td></tr>
       </table>
-      <p style="margin-top:6px;font-size:0.8rem;opacity:0.7;">Each game has a random mix of 12 Royals (J=1pt, Q=2pts, K=3pts), plus 2 Jokers. 54 cards total.</p>
     </div>
 
     <div class="help-section">
-      <h3>Setup</h3>
-      <p>Each player draws 5 cards. You may <strong>mulligan</strong> once to discard your hand and draw 5 new cards. On your first turn, you do not draw a card.</p>
+      <h3>Setup &amp; Mulligan</h3>
+      <p>Each player draws 5 cards. Before the game starts you may <strong>mulligan once</strong>: shuffle your hand back into the deck and draw 5 new cards. On your very first turn you do <strong>not</strong> draw a card.</p>
     </div>
 
     <div class="help-section">
       <h3>Your Turn</h3>
-      <p>Draw 1 card from the deck (except your first turn), then choose a path:</p>
+      <p>At the start of every turn after the first, you draw 1 card from the deck. Then you choose a path:</p>
       <ul>
-        <li><strong>Path A (default):</strong> Take 1 action</li>
-        <li><strong>Discard 2, Put 2:</strong> Discard 2 cards, then take 2 actions</li>
+        <li><strong>Path A (default):</strong> Take 1 action.</li>
+        <li><strong>Discard 2, Put 2:</strong> Discard 2 cards from your hand, then take 2 actions instead of 1.</li>
       </ul>
+      <p style="margin-top:6px;opacity:0.85;">Choose Path B if you want to do two things in one turn (e.g. deploy AND attack), or if you want to grab a card from the discard pile (which costs 2 actions).</p>
     </div>
 
     <div class="help-section">
       <h3>Actions</h3>
       <ul>
-        <li><strong>Deploy:</strong> Place cards of the same rank face-down on the left or right side of your board. If your board has fewer than 3 units, you may keep placing more cards as part of the same action.</li>
-        <li><strong>Attack:</strong> Send cards of the same rank to attack the opponent's board from the left or right side. This always ends your turn.</li>
-        <li><strong>Pick up discard:</strong> Take the top card of the discard pile (costs 2 actions).</li>
-        <li><strong>Pass:</strong> Do nothing with your remaining action.</li>
+        <li><strong>Deploy:</strong> Place one or more cards from your hand face-down on the left or right side of your board. Multiple cards of the same rank deployed together form a single <strong>unit</strong>. <em>Bonus:</em> if your board has fewer than 3 units, you may keep deploying more units as part of the same action — you only stop spending the action once your board reaches 3 units (or you click "Done Deploying").</li>
+        <li><strong>Attack:</strong> Send one or more cards of the same rank from your hand to attack the opponent's board, choosing the left or right side. <strong>Attacking always ends your turn immediately</strong> (even on Path B).</li>
+        <li><strong>Pick Up Discard:</strong> Take the top card of the discard pile into your hand. Costs <strong>2 actions</strong>, so it is only available on Path B.</li>
+        <li><strong>Pass:</strong> Skip your remaining action and end your turn.</li>
       </ul>
     </div>
 
     <div class="help-section">
-      <h3>Units</h3>
-      <p>Multiple cards of the <strong>same rank</strong> deployed together form a single unit. Their power stacks (e.g., two 5s = power 10).</p>
+      <h3>Units &amp; Power</h3>
+      <p>You can deploy or attack with multiple cards of the same rank at once. They form a single unit, and for combat purposes their power adds up. Two 5s = power 10. Three 4s = power 12. Royals stack too, but Royals don't have combat power — they always destroy exactly one defender (see below).</p>
     </div>
 
     <div class="help-section">
-      <h3>Attacking</h3>
+      <h3>Combat</h3>
+      <p>When you attack, your unit fights the opponent's units one at a time, starting from the side you chose (left or right).</p>
+
+      <h4 style="font-size:0.9rem;color:#aed581;margin-top:8px;">Knight vs Knight</h4>
       <ul>
-        <li>Your attacker fights defenders from the chosen side (left or right) one at a time.</li>
-        <li>If attacker power &gt; defender power, the defender is destroyed and leftover power carries through to the next defender.</li>
-        <li>If attacker power &lt; defender power, the attack is blocked. Attacker is destroyed, defender survives.</li>
-        <li>If equal, both are destroyed.</li>
-        <li><strong>Royal attackers</strong> destroy one unit (regardless of power), then are destroyed themselves.</li>
-        <li><strong>Attacking a Royal defender:</strong> Both attacker and Royal are destroyed.</li>
+        <li>If your power is <strong>greater</strong> than the defender's, the defender is destroyed and the leftover power carries through to the next defender.</li>
+        <li>If your power is <strong>less</strong> than the defender's, your attack is blocked. Your unit is destroyed, the defender survives.</li>
+        <li>If powers are <strong>equal</strong>, both are destroyed.</li>
       </ul>
+
+      <div class="example-demo" data-example="knight-wins">
+        <div class="example-title">Example: Knight wins</div>
+        <div class="example-desc">A 7 attacks a 5. The 7 destroys the 5, then 2 power continues toward the next defender.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
+      </div>
+
+      <div class="example-demo" data-example="knight-blocked">
+        <div class="example-title">Example: Knight blocked</div>
+        <div class="example-desc">A 5 attacks an 8. The 5 is too weak — it's destroyed, the 8 survives.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
+      </div>
+
+      <div class="example-demo" data-example="knight-tie">
+        <div class="example-title">Example: Mutual destruction</div>
+        <div class="example-desc">A 7 attacks a 7. Equal power — both are destroyed.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
+      </div>
+
+      <h4 style="font-size:0.9rem;color:#aed581;margin-top:14px;">Royal attackers</h4>
+      <p>When you attack with a Royal (J/Q/K), it ignores power: it destroys exactly <strong>one</strong> defender — any defender — then dies itself. Use Royals to take out scary enemies.</p>
+
+      <div class="example-demo" data-example="royal-attacks">
+        <div class="example-title">Example: Royal attack</div>
+        <div class="example-desc">A King attacks a 9. The 9 is destroyed, and the King also dies. (Royals are kamikazes.)</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
+      </div>
+
+      <h4 style="font-size:0.9rem;color:#aed581;margin-top:14px;">Attacking a Royal defender</h4>
+      <p>Royals on defense are deadly. <strong>Any</strong> attacker that hits a Royal — knight or another Royal — is destroyed along with the Royal. Both die.</p>
+
+      <div class="example-demo" data-example="knight-vs-royal">
+        <div class="example-title">Example: Knight hits a Royal</div>
+        <div class="example-desc">A 10 attacks a Queen. Both are destroyed. The 10 cannot break through.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
+      </div>
     </div>
 
     <div class="help-section">
-      <h3>Ace (Special)</h3>
-      <p>When an Ace is defending and is attacked by a non-Royal, the attacker <strong>replaces</strong> the Ace on the board. The Ace is destroyed.</p>
+      <h3>The Ace Trap (very important!)</h3>
+      <p>An Ace on defense looks weak (power 1) but it's a <strong>trap</strong>. When <strong>any</strong> unit — knight or Royal — attacks an Ace, the attacking unit gets <strong>captured</strong>: it doesn't get destroyed. Instead, your attacking cards become an enemy unit on <strong>your opponent's board</strong>. The Ace itself is destroyed.</p>
+      <p style="margin-top:6px;color:#ef9a9a;"><strong>That means attacking an Ace is usually a disaster:</strong> you lose your unit AND hand it to your opponent. Be especially careful with attacking Aces using your Royals — you'll literally give them away.</p>
+
+      <div class="example-demo" data-example="ace-trap-knight">
+        <div class="example-title">Example: Ace traps a Knight</div>
+        <div class="example-desc">An 8 attacks an Ace. The Ace is destroyed, but the 8 is captured and now sits on the opponent's board.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
+      </div>
+
+      <div class="example-demo" data-example="ace-trap-royal">
+        <div class="example-title">Example: Ace traps a King</div>
+        <div class="example-desc">A King attacks an Ace. The Ace dies, but the King is now on the opponent's board — they get the 3 points!</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
+      </div>
+
+      <p style="margin-top:6px;font-size:0.8rem;opacity:0.75;">Stacking 2 Aces together does not change anything — they still spring once and consume both Ace cards.</p>
     </div>
 
     <div class="help-section">
-      <h3>Joker (Wild Card)</h3>
+      <h3>Jokers (Wild Cards)</h3>
+      <p>There are 2 Jokers in the deck. A Joker can be added to <strong>any</strong> group of cards you deploy or attack with — it counts as the same rank.</p>
       <ul>
-        <li>There are 2 Jokers in the deck. A Joker can be paired with <strong>any</strong> card of the same or different rank.</li>
-        <li><strong>Joker alone:</strong> Acts like a Queen — worth 2 points, behaves as a Royal in combat.</li>
-        <li><strong>Joker + Knight:</strong> Copies the knight's value (e.g., Joker + 7 = power 14).</li>
-        <li><strong>Joker + Royal:</strong> Adds 2 points to the unit's scoring value.</li>
+        <li><strong>Joker alone:</strong> Acts as a Royal in combat (destroys one defender). Worth <strong>2 points</strong> at end-game.</li>
+        <li><strong>Joker + Knight:</strong> The Joker copies the knight's value. e.g. Joker + 7 = a unit of power 14. Joker + 7 + 7 = power 21.</li>
+        <li><strong>Joker + Royal:</strong> The unit acts as a Royal in combat. The Joker still scores its 2 points on top of the Royal's points (e.g. Joker + King = 5 points).</li>
+        <li><strong>A Joker on your board always scores 2 points</strong> at end-game, even if it's part of a knight unit.</li>
       </ul>
     </div>
 
     <div class="help-section">
       <h3>Hand Limit</h3>
-      <p>Maximum hand size is 10 cards. If your hand exceeds 10 at the end of your turn, you must discard down to 10.</p>
+      <p>You can hold a maximum of <strong>10 cards</strong>. If your hand goes over 10 at the end of your turn, you must discard down to 10.</p>
     </div>
 
     <div class="help-section">
       <h3>End of Game</h3>
-      <p>When the deck runs out, players must attack each turn or <strong>Pass &amp; Discard All</strong> to discard their entire hand. When both players have no cards left, the game ends.</p>
-      <p>All board units are revealed and <strong>surviving Royals</strong> are scored:</p>
+      <p>When the deck runs out, the game enters the <strong>Forced Attack</strong> phase. On each of your remaining turns you must either attack OR press <strong>Pass &amp; Discard All</strong> to dump your entire hand. Once both players have no cards left in hand, the game ends.</p>
+      <p style="margin-top:6px;">All board units are revealed. Surviving <strong>Royals and Jokers</strong> on your board count toward your score:</p>
       <table class="help-table">
-        <tr><th>Royal</th><th>Points</th></tr>
-        <tr><td>Jack (J)</td><td>1 point</td></tr>
-        <tr><td>Queen (Q)</td><td>2 points</td></tr>
-        <tr><td>King (K)</td><td>3 points</td></tr>
-        <tr><td>Joker</td><td>2 points</td></tr>
+        <tr><th>Card on board</th><th>Points</th></tr>
+        <tr><td>Jack</td><td>1</td></tr>
+        <tr><td>Queen</td><td>2</td></tr>
+        <tr><td>King</td><td>3</td></tr>
+        <tr><td>Joker</td><td>2 (always)</td></tr>
       </table>
-      <p style="margin-top:8px;">The player with the most Royal points wins.</p>
+      <p style="margin-top:8px;">The player with the most points wins. Ties are possible.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>Strategy Tips</h3>
+      <ul>
+        <li>Royals score points but die easily on attack. Most of the time you want to <strong>protect</strong> them on your board, not send them out.</li>
+        <li>Always have non-Royal "shield" units in front of your Royals. Otherwise the opponent can pick them off with a Royal of their own.</li>
+        <li>Aces are a great cheap defender — attackers will think twice before stepping on them.</li>
+        <li>Never attack an Ace with your King unless you really know what you're doing — you might just gift them 3 points.</li>
+        <li>Save Jokers for high-value pairings: Joker + King = 5 points; or pair a Joker with your strongest knight to make a powerhouse attacker.</li>
+      </ul>
     </div>
 
     <div class="help-close">
@@ -625,12 +794,17 @@ function hideAll() {
   document.getElementById("waiting").style.display = "none";
   document.getElementById("game").style.display = "none";
   document.getElementById("ingame-help").style.display = "none";
+  document.body.classList.remove("on-menu");
 }
 
 function backToMenu() {
   hideAll();
   document.getElementById("menu").style.display = "flex";
+  document.body.classList.add("on-menu");
 }
+
+// Show menu styling on load
+document.addEventListener("DOMContentLoaded", () => { document.body.classList.add("on-menu"); });
 
 function showRoomScreen() {
   hideAll();
@@ -669,8 +843,91 @@ function startBot() {
   socket.emit("join_bot");
 }
 
-function showHelp() { document.getElementById("help-overlay").classList.add("visible"); }
+function showHelp() {
+  document.getElementById("help-overlay").classList.add("visible");
+  setupExampleDemos();
+}
 function hideHelp() { document.getElementById("help-overlay").classList.remove("visible"); }
+
+// --- Help example demos ---
+const EXAMPLES = {
+  "knight-wins":     {atk: {rank:"7"}, def: {rank:"5"}, kind: "destroyed", text: "5 destroyed (2 power carries)"},
+  "knight-blocked":  {atk: {rank:"5"}, def: {rank:"8"}, kind: "blocked",   text: "Attack blocked — 5 destroyed"},
+  "knight-tie":      {atk: {rank:"7"}, def: {rank:"7"}, kind: "tie",       text: "Both destroyed"},
+  "royal-attacks":   {atk: {rank:"K"}, def: {rank:"9"}, kind: "royal_kill",text: "9 destroyed, King also dies"},
+  "knight-vs-royal": {atk: {rank:"10"},def: {rank:"Q"}, kind: "tie",       text: "Both destroyed"},
+  "ace-trap-knight": {atk: {rank:"8"}, def: {rank:"A"}, kind: "trap",      text: "8 captured by opponent!"},
+  "ace-trap-royal":  {atk: {rank:"K"}, def: {rank:"A"}, kind: "trap",      text: "King captured by opponent!"},
+};
+
+function setupExampleDemos() {
+  document.querySelectorAll(".example-demo").forEach(demo => {
+    if (demo.dataset.initialized) return;
+    demo.dataset.initialized = "1";
+    const ex = EXAMPLES[demo.dataset.example];
+    if (!ex) return;
+    const stage = demo.querySelector(".demo-stage");
+    stage.innerHTML += `<div class="demo-card-slot demo-attacker-slot">${cardHTML(ex.atk, "sm-card")}</div>` +
+                       `<div class="demo-vs">VS</div>` +
+                       `<div class="demo-card-slot demo-defender-slot">${cardHTML(ex.def, "sm-card")}</div>` +
+                       `<div class="demo-result"></div>`;
+    // restore the side labels (innerHTML+= would have removed them — actually no, we used += so they're preserved)
+    const btn = demo.querySelector(".demo-play-btn");
+    btn.onclick = () => playExampleDemo(demo);
+    // Auto-play once when first opened
+    setTimeout(() => playExampleDemo(demo), 200);
+  });
+}
+
+function playExampleDemo(demo) {
+  const ex = EXAMPLES[demo.dataset.example];
+  if (!ex) return;
+  const atkSlot = demo.querySelector(".demo-attacker-slot");
+  const defSlot = demo.querySelector(".demo-defender-slot");
+  const vs = demo.querySelector(".demo-vs");
+  const result = demo.querySelector(".demo-result");
+
+  // Reset
+  atkSlot.classList.remove("attacking", "dying", "hidden");
+  defSlot.classList.remove("dying", "hidden");
+  vs.classList.remove("gone");
+  result.classList.remove("show", "win", "loss", "tie", "trap");
+  result.textContent = "";
+  atkSlot.innerHTML = cardHTML(ex.atk, "sm-card");
+  defSlot.innerHTML = cardHTML(ex.def, "sm-card");
+
+  // Step 1: Lunge
+  setTimeout(() => {
+    atkSlot.classList.add("attacking");
+    vs.classList.add("gone");
+  }, 350);
+
+  // Step 2: Resolve
+  setTimeout(() => {
+    if (ex.kind === "destroyed") {
+      defSlot.classList.add("dying");
+      result.classList.add("show", "win");
+    } else if (ex.kind === "blocked") {
+      atkSlot.classList.add("dying");
+      result.classList.add("show", "loss");
+    } else if (ex.kind === "tie") {
+      atkSlot.classList.add("dying");
+      defSlot.classList.add("dying");
+      result.classList.add("show", "tie");
+    } else if (ex.kind === "royal_kill") {
+      defSlot.classList.add("dying");
+      setTimeout(() => atkSlot.classList.add("dying"), 400);
+      result.classList.add("show", "win");
+    } else if (ex.kind === "trap") {
+      // Defender (ace) dies, attacker stays but is "captured"
+      defSlot.classList.add("dying");
+      atkSlot.style.boxShadow = "0 0 16px 4px rgba(156,39,176,0.7)";
+      result.classList.add("show", "trap");
+      setTimeout(() => { atkSlot.style.boxShadow = ""; }, 1500);
+    }
+    result.textContent = ex.text;
+  }, 950);
+}
 
 socket.on("opponent_left", () => { alert("Opponent disconnected."); location.reload(); });
 
