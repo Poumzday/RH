@@ -195,28 +195,29 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .card-royal.rs-violet .royal-icon, .card-royal.rs-violet .corner { color: #f3c0ff; }
 .card-royal.rs-violet .royal-rank { color: #ea80fc; }
 
-/* Emperor — ultra rare (1% chance). Imperial gold & crimson */
+/* Emperor — ultra rare (1% chance). Soft rainbow shimmer */
 .card-royal.rs-imperial {
-  background: linear-gradient(160deg, #1a0000 0%, #5c0015 25%, #8b0020 50%, #5c0015 75%, #1a0000 100%);
-  border-color: #ffd700;
+  background: linear-gradient(135deg, #ffe0ec 0%, #ffe9c7 18%, #fff7c2 34%, #d4f7c7 50%, #c5ecff 66%, #e0d4ff 82%, #ffd4f0 100%);
+  border-color: #ffffff;
   border-width: 3px;
-  box-shadow: 0 3px 20px rgba(255,215,0,0.55), inset 0 0 24px rgba(255,215,0,0.1);
+  box-shadow: 0 3px 20px rgba(255,255,255,0.55), inset 0 0 24px rgba(255,255,255,0.35);
   animation: imperialShine 3s ease-in-out infinite;
 }
 .card-royal.rs-imperial::before {
-  border-color: rgba(255,215,0,0.35);
+  border-color: rgba(255,255,255,0.55);
 }
 .card-royal.rs-imperial .royal-icon,
-.card-royal.rs-imperial .corner { color: #ffd700; }
+.card-royal.rs-imperial .corner { color: #6a1b9a; }
 .card-royal.rs-imperial .royal-rank {
-  color: #fff9c4;
-  text-shadow: 0 0 10px rgba(255,215,0,0.7);
-  font-size: 0.7rem;
+  color: #4a148c;
+  text-shadow: 0 0 8px rgba(255,255,255,0.8);
+  font-size: 0.55rem;
 }
-.card-royal.rs-imperial .royal-bg-icon { color: #ffd700; opacity: 0.12; }
+.card-royal.rs-imperial .royal-bg-icon { color: #8e24aa; opacity: 0.15; }
 @keyframes imperialShine {
-  0%, 100% { box-shadow: 0 3px 20px rgba(255,215,0,0.55), inset 0 0 24px rgba(255,215,0,0.1); }
-  50%      { box-shadow: 0 3px 28px rgba(255,215,0,0.85), inset 0 0 32px rgba(255,215,0,0.18); }
+  0%, 100% { box-shadow: 0 3px 20px rgba(255,182,193,0.55), inset 0 0 24px rgba(255,255,255,0.35); }
+  33%      { box-shadow: 0 3px 24px rgba(180,220,255,0.65), inset 0 0 28px rgba(255,255,255,0.4); }
+  66%      { box-shadow: 0 3px 24px rgba(200,255,200,0.65), inset 0 0 28px rgba(255,255,255,0.4); }
 }
 
 .card-back { background: linear-gradient(135deg, #1a237e 0%, #283593 40%, #1a237e 60%, #303f9f 100%); border: 2px solid #5c6bc0; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
@@ -916,19 +917,25 @@ const EXAMPLES = {
 const SCORE_SCENARIOS = {
   a: {
     units: [
+      [{rank:"5"}],
       [{rank:"K"}],
+      [{rank:"9"}, {rank:"9"}],
       [{rank:"Q"}],
       [{rank:"W"}, {rank:"7"}],
+      [{rank:"3"}],
     ],
-    calc: "King (3) + Queen (2) + Joker (2, even in a knight unit) = 7 points",
+    calc: "King (3) + Queen (2) + Joker (2, even in a knight unit) = 7 points  •  Knights score 0",
   },
   b: {
     units: [
+      [{rank:"8"}],
       [{rank:"E"}],
+      [{rank:"4"}, {rank:"4"}],
       [{rank:"W"}],
+      [{rank:"6"}],
       [{rank:"J"}],
     ],
-    calc: "Emperor (4) + Joker alone (2) + Jack (1) = 7 points",
+    calc: "Emperor (4) + Joker alone (2) + Jack (1) = 7 points  •  Knights score 0",
   },
 };
 
