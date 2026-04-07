@@ -485,6 +485,12 @@ body.on-menu {
 }
 .demo-side-label.demo-atk { left: 12px; color: #66bb6a; }
 .demo-side-label.demo-def { right: 12px; color: #ef9a9a; }
+.score-demo { background:rgba(0,0,0,0.25); border-radius:10px; padding:10px 12px; margin-top:10px; }
+.score-demo .score-board { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:10px; margin:8px 0; }
+.score-demo .score-board .unit-group { display:inline-flex; }
+.score-demo .score-board .unit-group .card { margin-left:-30px; }
+.score-demo .score-board .unit-group .card:first-child { margin-left:0; }
+.score-demo .score-calc { text-align:center; font-size:0.9rem; color:#fff8c4; font-weight:bold; }
 .demo-card-slot { position: relative; transition: transform 0.6s ease, opacity 0.5s; }
 .demo-card-slot.attacking { transform: translateX(60px) scale(1.08); }
 .demo-card-slot.recoil { transform: translateX(0); }
@@ -726,6 +732,17 @@ body.on-menu {
         <tr><td>Joker</td><td>2 (always)</td></tr>
       </table>
       <p style="margin-top:8px;">The player with the most points wins. Ties are possible.</p>
+
+      <div class="score-demo" data-scenario="a">
+        <div class="example-title">Scoring example 1</div>
+        <div class="score-board"></div>
+        <div class="score-calc"></div>
+      </div>
+      <div class="score-demo" data-scenario="b">
+        <div class="example-title">Scoring example 2</div>
+        <div class="score-board"></div>
+        <div class="score-calc"></div>
+      </div>
     </div>
 
     <div class="help-section">
@@ -896,7 +913,41 @@ const EXAMPLES = {
   "ace-trap-royal":  {atk: {rank:"K"}, def: {rank:"A"}, kind: "trap",      text: "King captured by opponent!"},
 };
 
+const SCORE_SCENARIOS = {
+  a: {
+    units: [
+      [{rank:"K"}],
+      [{rank:"Q"}],
+      [{rank:"W"}, {rank:"7"}],
+    ],
+    calc: "King (3) + Queen (2) + Joker (2, even in a knight unit) = 7 points",
+  },
+  b: {
+    units: [
+      [{rank:"E"}],
+      [{rank:"W"}],
+      [{rank:"J"}],
+    ],
+    calc: "Emperor (4) + Joker alone (2) + Jack (1) = 7 points",
+  },
+};
+
+function setupScoreDemos() {
+  document.querySelectorAll(".score-demo").forEach(demo => {
+    if (demo.dataset.initialized) return;
+    demo.dataset.initialized = "1";
+    const sc = SCORE_SCENARIOS[demo.dataset.scenario];
+    if (!sc) return;
+    const board = demo.querySelector(".score-board");
+    board.innerHTML = sc.units.map(unit =>
+      `<div class="unit-group">${unit.map(c => cardHTML(c, "sm-card")).join("")}</div>`
+    ).join("");
+    demo.querySelector(".score-calc").textContent = sc.calc;
+  });
+}
+
 function setupExampleDemos() {
+  setupScoreDemos();
   document.querySelectorAll(".example-demo").forEach(demo => {
     if (demo.dataset.initialized) return;
     demo.dataset.initialized = "1";
