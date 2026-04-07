@@ -66,6 +66,28 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .card-ace .corner-tl { top: 3px; left: 4px; }
 .card-ace .corner-br { bottom: 3px; right: 4px; transform: rotate(180deg); }
 
+/* --- Joker card (wild) --- */
+.card-joker {
+  background: linear-gradient(160deg, #1a0a2e 0%, #2d1b69 25%, #11998e 50%, #6a0572 75%, #1a0a2e 100%);
+  border: 2px solid #ffd700;
+  box-shadow: 0 2px 10px rgba(255,215,0,0.35), inset 0 0 15px rgba(255,215,0,0.05);
+  color: #ffd700;
+}
+.card-joker::before {
+  content: ""; position: absolute; inset: 3px; border: 1px solid rgba(255,215,0,0.25); border-radius: 5px; pointer-events: none;
+}
+.card-joker::after {
+  content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+  background: linear-gradient(45deg, transparent 40%, rgba(255,215,0,0.06) 50%, transparent 60%);
+  pointer-events: none; z-index: 2;
+}
+.card-joker .card-icon { font-size: 2.8rem; opacity: 0.1; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; }
+.card-joker .rank { font-size: 1.8rem; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+.card-joker .joker-label { font-size: 0.45rem; text-transform: uppercase; letter-spacing: 3px; opacity: 0.8; z-index: 1; margin-top: 1px; font-weight: 700; }
+.card-joker .corner { position: absolute; font-size: 0.55rem; line-height: 1; z-index: 1; color: #ffd700; }
+.card-joker .corner-tl { top: 3px; left: 4px; }
+.card-joker .corner-br { bottom: 3px; right: 4px; transform: rotate(180deg); }
+
 /* --- Royal cards (J/Q/K) — base --- */
 .card-royal {
   border: 2px solid;
@@ -187,6 +209,7 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .sm-card .corner { font-size: 0.4rem !important; }
 .sm-card .card-icon { font-size: 1.2rem !important; }
 .sm-card .knight-label { display: none; }
+.sm-card .joker-label { display: none; }
 
 /* --- Drop zones --- */
 .drop-zone {
@@ -438,8 +461,9 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
         <tr><td>2 - 10</td><td>Knight</td><td>Face value</td><td>Your fighters and defenders (no suits)</td></tr>
         <tr><td>J, Q, K</td><td>Royal</td><td>None</td><td>Worth points — each has a unique color</td></tr>
         <tr><td>A</td><td>Ace</td><td>1</td><td>Special trap defender (see below)</td></tr>
+        <tr><td>Joker</td><td>Wild</td><td>Varies</td><td>2 pts alone; pairs with any card (see below)</td></tr>
       </table>
-      <p style="margin-top:6px;font-size:0.8rem;opacity:0.7;">Each game has a random mix of Royals (J=1pt, Q=2pts, K=3pts) that always totals 12 points.</p>
+      <p style="margin-top:6px;font-size:0.8rem;opacity:0.7;">Each game has a random mix of 12 Royals (J=1pt, Q=2pts, K=3pts), plus 2 Jokers. 54 cards total.</p>
     </div>
 
     <div class="help-section">
@@ -489,19 +513,30 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
     </div>
 
     <div class="help-section">
+      <h3>Joker (Wild Card)</h3>
+      <ul>
+        <li>There are 2 Jokers in the deck. A Joker can be paired with <strong>any</strong> card of the same or different rank.</li>
+        <li><strong>Joker alone:</strong> Acts like a Queen — worth 2 points, behaves as a Royal in combat.</li>
+        <li><strong>Joker + Knight:</strong> Copies the knight's value (e.g., Joker + 7 = power 14).</li>
+        <li><strong>Joker + Royal:</strong> Adds 2 points to the unit's scoring value.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
       <h3>Hand Limit</h3>
       <p>Maximum hand size is 10 cards. If your hand exceeds 10 at the end of your turn, you must discard down to 10.</p>
     </div>
 
     <div class="help-section">
       <h3>End of Game</h3>
-      <p>When the deck runs out, players must attack each turn with whatever cards they have. When both players have no cards left, the game ends.</p>
+      <p>When the deck runs out, players must attack each turn or <strong>Pass &amp; Discard All</strong> to discard their entire hand. When both players have no cards left, the game ends.</p>
       <p>All board units are revealed and <strong>surviving Royals</strong> are scored:</p>
       <table class="help-table">
         <tr><th>Royal</th><th>Points</th></tr>
         <tr><td>Jack (J)</td><td>1 point</td></tr>
         <tr><td>Queen (Q)</td><td>2 points</td></tr>
         <tr><td>King (K)</td><td>3 points</td></tr>
+        <tr><td>Joker</td><td>2 points</td></tr>
       </table>
       <p style="margin-top:8px;">The player with the most Royal points wins.</p>
     </div>
@@ -688,6 +723,16 @@ function cardHTML(card, cls) {
   const extra = cls || "";
   const style = card.style || "";
 
+  if (r === "W") {
+    return `<div class="card card-joker ${extra}">` +
+      `<div class="corner corner-tl">🃏</div>` +
+      `<div class="card-icon">🃏</div>` +
+      `<div class="rank">🃏</div>` +
+      `<div class="joker-label">Joker</div>` +
+      `<div class="corner corner-br">🃏</div>` +
+    `</div>`;
+  }
+
   if (r === "A") {
     return `<div class="card card-ace ${extra}">` +
       `<div class="corner corner-tl">A</div>` +
@@ -834,10 +879,13 @@ function showToast(msg) {
 function validateSameRank() {
   if (selectedIndices.length === 0) return false;
   const hand = state.hand;
-  const rank = hand[selectedIndices[0]].rank;
-  if (!selectedIndices.every(i => hand[i].rank === rank)) {
-    showToast("Selected cards must be the same rank!");
-    return false;
+  const nonJokers = selectedIndices.filter(i => hand[i].rank !== "W");
+  if (nonJokers.length > 0) {
+    const rank = hand[nonJokers[0]].rank;
+    if (!nonJokers.every(i => hand[i].rank === rank)) {
+      showToast("Selected cards must be the same rank!");
+      return false;
+    }
   }
   return true;
 }
@@ -883,7 +931,7 @@ function renderActions() {
   }
 
   const forced = state.phase==="forced_attack", deploying = state.phase==="deploy";
-  if (forced) el.innerHTML='<div class="action-label">Deck empty — you must attack!</div>';
+  if (forced) el.innerHTML='<div class="action-label">Deck empty — attack or discard all</div>';
   else if (deploying) el.innerHTML='<div class="action-label">Deploy more units or finish</div>';
   else el.innerHTML=`<div class="action-label">Take an action (${state.actions_remaining} left)</div>`;
 
@@ -903,6 +951,7 @@ function renderActions() {
   if (av.includes("finish_deploy")) addBtn(el,"Done Deploying","btn btn-secondary",()=>socket.emit("finish_deploy"));
   if (av.includes("pick_discard")) addBtn(el,"Pick Up Discard (2 actions)","btn btn-gold",()=>socket.emit("pick_discard"));
   if (av.includes("pass")) addBtn(el,"Pass","btn btn-secondary",()=>socket.emit("pass_action"));
+  if (av.includes("pass_discard_all")) addBtn(el,"Pass & Discard All","btn btn-danger",()=>socket.emit("pass_discard_all"));
   if (av.includes("switch_path_b")) addBtn(el,"Discard 2, Put 2","btn btn-sm btn-secondary",()=>socket.emit("switch_to_path_b"), !state.can_path_b);
 }
 

@@ -14,15 +14,11 @@ KNIGHT_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 BOT_SID = "__bot__"
 
 def random_royal_counts():
-    """Random J/Q/K counts summing to 12 points. J=1, Q=2, K=3."""
-    j = random.randint(0, 8)
+    """Random J/Q/K counts summing to 12 cards total."""
+    j = random.randint(0, 12)
     remaining = 12 - j
-    max_q = min(8, remaining // 2)
-    q = random.randint(0, max_q)
-    remaining -= q * 2
-    if remaining % 3 != 0 or remaining // 3 > 8:
-        return random_royal_counts()  # retry
-    k = remaining // 3
+    q = random.randint(0, remaining)
+    k = remaining - q
     return j, q, k
 
 # 12 unique royal visual styles
@@ -36,7 +32,7 @@ ROYAL_STYLES = [
 def card_value(rank):
     if rank == "A":
         return 1
-    if rank in ("J", "Q", "K"):
+    if rank in ("J", "Q", "K", "W"):
         return 0
     return int(rank)
 
@@ -46,7 +42,7 @@ def is_royal(rank):
 
 
 def royal_points(rank):
-    return {"J": 1, "Q": 2, "K": 3}.get(rank, 0)
+    return {"J": 1, "Q": 2, "K": 3, "W": 2}.get(rank, 0)
 
 
 def make_deck():
@@ -69,17 +65,37 @@ def make_deck():
     for _ in range(k_count):
         deck.append({"rank": "K", "suit": "none", "style": styles[style_idx % len(styles)]})
         style_idx += 1
+    # 2 Jokers (wild cards)
+    deck.append({"rank": "W", "suit": "none"})
+    deck.append({"rank": "W", "suit": "none"})
     random.shuffle(deck)
     return deck
 
 
 def make_unit(cards):
-    rank = cards[0]["rank"]
+    jokers = [c for c in cards if c["rank"] == "W"]
+    non_jokers = [c for c in cards if c["rank"] != "W"]
+
+    if non_jokers:
+        rank = non_jokers[0]["rank"]
+        royal = is_royal(rank)
+        if royal:
+            power = 0
+        else:
+            # Each joker copies the knight's value
+            base = card_value(rank)
+            power = base * len(cards)
+    else:
+        # All jokers — acts like a Queen
+        rank = "W"
+        royal = True
+        power = 0
+
     return {
         "cards": list(cards),
         "rank": rank,
-        "is_royal": is_royal(rank),
-        "power": sum(card_value(c["rank"]) for c in cards),
+        "is_royal": royal,
+        "power": power,
     }
 
 
@@ -311,7 +327,8 @@ class Game:
         if not card_indices:
             return
         cards = [hand[i] for i in card_indices]
-        if len(set(c["rank"] for c in cards)) != 1:
+        non_jokers = [c for c in cards if c["rank"] != "W"]
+        if non_jokers and len(set(c["rank"] for c in non_jokers)) != 1:
             return
         unit = make_unit(cards)
         board = self.boards[sid]
@@ -365,7 +382,8 @@ class Game:
         if not card_indices:
             return
         cards = [hand[i] for i in card_indices]
-        if len(set(c["rank"] for c in cards)) != 1:
+        non_jokers = [c for c in cards if c["rank"] != "W"]
+        if non_jokers and len(set(c["rank"] for c in non_jokers)) != 1:
             return
         unit = make_unit(cards)
         opp = self.opponent_of(sid)
@@ -402,6 +420,14 @@ class Game:
         self.pending_logs.append(f"Player {self.player_number(sid)} passed")
         self.actions_remaining = 0
         self.check_end_actions()
+
+    def pass_and_discard_all(self, sid):
+        if sid != self.current_player() or self.phase != "forced_attack":
+            return
+        self.pending_logs.append(f"Player {self.player_number(sid)} passed and discarded all")
+        self.discard.extend(self.hands[sid])
+        self.hands[sid] = []
+        self.phase = "turn_over"
 
     def check_end_actions(self):
         if self.actions_remaining <= 0:
@@ -455,6 +481,9 @@ class Game:
                 if unit["is_royal"]:
                     for c in unit["cards"]:
                         pts += royal_points(c["rank"])
+                else:
+                    # Jokers always score 2 pts each, even in knight units
+                    pts += 2 * sum(1 for c in unit["cards"] if c["rank"] == "W")
                 total += pts
                 reveal.append({
                     "cards": unit["cards"],
@@ -488,6 +517,7 @@ class Game:
             available.append("finish_deploy")
         elif your_turn and self.phase == "forced_attack":
             available.append("attack")
+            available.append("pass_discard_all")
         elif your_turn and self.phase == "discard_for_b":
             available.append("discard")
         elif your_turn and self.phase == "turn_over":
@@ -609,8 +639,8 @@ def bot_act(game):
     hand = game.hands.get(sid, [])
 
     if game.phase == "mulligan" and sid not in game.mulligan_decisions:
-        # Mulligan if no royals in hand
-        has_royal = any(is_royal(c["rank"]) for c in hand)
+        # Mulligan if no royals or jokers in hand
+        has_royal = any(is_royal(c["rank"]) or c["rank"] == "W" for c in hand)
         game.mulligan(sid, not has_royal)
         broadcast_state(game)
         return
@@ -628,7 +658,11 @@ def bot_act(game):
 
     elif game.phase == "forced_attack":
         if hand:
-            _bot_smart_attack(game, sid, hand)
+            opp = game.opponent_of(sid)
+            if not game.boards.get(opp, []):
+                game.pass_and_discard_all(sid)
+            else:
+                _bot_smart_attack(game, sid, hand)
         broadcast_state(game)
 
     elif game.phase == "turn_over":
@@ -651,9 +685,20 @@ def _bot_action(game, sid, hand):
     my_board = game.boards.get(sid, [])
     groups = _bot_hand_groups(hand)
 
-    # Priority 1: Deploy royals for protection (put them behind defenders)
-    royals_in_hand = [r for r in groups if is_royal(r)]
+    # Priority 1: Deploy royals/jokers for protection (put them behind defenders)
+    royals_in_hand = [r for r in groups if is_royal(r) or r == "W"]
     non_royals_on_board = [u for u in my_board if not u["is_royal"]]
+
+    # Priority 0: Pair Joker with highest Royal for max points
+    real_royals = [r for r in groups if is_royal(r)]
+    if "W" in groups and real_royals and len(my_board) >= 1:
+        best_royal = max(real_royals, key=lambda r: royal_points(r))
+        combined = groups["W"] + groups[best_royal]
+        left_defenders = sum(1 for u in my_board[:len(my_board)//2+1] if not u["is_royal"])
+        right_defenders = sum(1 for u in my_board[len(my_board)//2:] if not u["is_royal"])
+        side = "left" if right_defenders >= left_defenders else "right"
+        game.deploy(sid, combined, side)
+        return
 
     if royals_in_hand and len(my_board) >= 1:
         # Deploy a royal, protected in the middle of the board
@@ -696,7 +741,7 @@ def _bot_action(game, sid, hand):
     should_attack = best_attack and best_score > 2
     should_deploy = knights_in_hand and len(my_board) < 4
 
-    # If no royals on board yet, prioritize deploying defenders first
+    # If no royals/jokers on board yet, prioritize deploying defenders first
     royals_on_board = [u for u in my_board if u["is_royal"]]
     if royals_in_hand and not non_royals_on_board:
         # Need defenders before deploying royals — deploy a knight
@@ -737,8 +782,8 @@ def _bot_deploy_more(game, sid, hand):
     groups = _bot_hand_groups(hand)
     my_board = game.boards.get(sid, [])
 
-    # Deploy royals if we have defenders already
-    royals_in_hand = [r for r in groups if is_royal(r)]
+    # Deploy royals/jokers if we have defenders already
+    royals_in_hand = [r for r in groups if is_royal(r) or r == "W"]
     non_royals_on_board = [u for u in my_board if not u["is_royal"]]
 
     if royals_in_hand and non_royals_on_board:
@@ -807,7 +852,7 @@ def _bot_smart_discard_excess(game, sid, hand):
     # Score each card: royals are most valuable, then high knights, aces least
     def card_keep_value(i):
         c = hand[i]
-        if is_royal(c["rank"]):
+        if is_royal(c["rank"]) or c["rank"] == "W":
             return 100 + royal_points(c["rank"])
         return card_value(c["rank"])
 
@@ -1001,6 +1046,16 @@ def on_pass():
     if not game:
         return
     game.pass_action(sid)
+    broadcast_state(game)
+
+
+@socketio.on("pass_discard_all")
+def on_pass_discard_all():
+    sid = request.sid
+    game = games.get(player_game.get(sid))
+    if not game:
+        return
+    game.pass_and_discard_all(sid)
     broadcast_state(game)
 
 
