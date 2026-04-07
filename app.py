@@ -18,13 +18,20 @@ socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins="*")
 KNIGHT_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 BOT_SID = "__bot__"
 
-def random_royal_counts():
-    """Random J/Q/K counts summing to 12 cards total."""
-    j = random.randint(0, 12)
-    remaining = 12 - j
-    q = random.randint(0, remaining)
-    k = remaining - q
-    return j, q, k
+def random_royals():
+    """Generate 12 royal ranks: each card independently 33% J / 33% Q / 33% K / 1% Emperor."""
+    ranks = []
+    for _ in range(12):
+        r = random.random()
+        if r < 0.01:
+            ranks.append("E")
+        elif r < 0.34:
+            ranks.append("J")
+        elif r < 0.67:
+            ranks.append("Q")
+        else:
+            ranks.append("K")
+    return ranks
 
 # 12 unique royal visual styles
 ROYAL_STYLES = [
@@ -37,17 +44,17 @@ ROYAL_STYLES = [
 def card_value(rank):
     if rank == "A":
         return 1
-    if rank in ("J", "Q", "K", "W"):
+    if rank in ("J", "Q", "K", "E", "W"):
         return 0
     return int(rank)
 
 
 def is_royal(rank):
-    return rank in ("J", "Q", "K")
+    return rank in ("J", "Q", "K", "E")
 
 
 def royal_points(rank):
-    return {"J": 1, "Q": 2, "K": 3, "W": 2}.get(rank, 0)
+    return {"J": 1, "Q": 2, "K": 3, "E": 4, "W": 2}.get(rank, 0)
 
 
 def make_deck():
@@ -56,20 +63,16 @@ def make_deck():
     for r in KNIGHT_RANKS:
         for _ in range(4):
             deck.append({"rank": r, "suit": "none"})
-    # Royals: random combo summing to 12 points, each with unique style
-    j_count, q_count, k_count = random_royal_counts()
+    # Royals: 12 cards, each independently rolled (33% J/Q/K, 1% Emperor)
+    royal_ranks = random_royals()
     styles = list(ROYAL_STYLES)
     random.shuffle(styles)
-    style_idx = 0
-    for _ in range(j_count):
-        deck.append({"rank": "J", "suit": "none", "style": styles[style_idx % len(styles)]})
-        style_idx += 1
-    for _ in range(q_count):
-        deck.append({"rank": "Q", "suit": "none", "style": styles[style_idx % len(styles)]})
-        style_idx += 1
-    for _ in range(k_count):
-        deck.append({"rank": "K", "suit": "none", "style": styles[style_idx % len(styles)]})
-        style_idx += 1
+    for i, r in enumerate(royal_ranks):
+        if r == "E":
+            # Emperors always use their unique imperial style
+            deck.append({"rank": "E", "suit": "none", "style": "imperial"})
+        else:
+            deck.append({"rank": r, "suit": "none", "style": styles[i % len(styles)]})
     # 2 Jokers (wild cards)
     deck.append({"rank": "W", "suit": "none"})
     deck.append({"rank": "W", "suit": "none"})

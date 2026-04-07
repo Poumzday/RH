@@ -195,6 +195,30 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .card-royal.rs-violet .royal-icon, .card-royal.rs-violet .corner { color: #f3c0ff; }
 .card-royal.rs-violet .royal-rank { color: #ea80fc; }
 
+/* Emperor — ultra rare (1% chance). Imperial gold & crimson */
+.card-royal.rs-imperial {
+  background: linear-gradient(160deg, #1a0000 0%, #5c0015 25%, #8b0020 50%, #5c0015 75%, #1a0000 100%);
+  border-color: #ffd700;
+  border-width: 3px;
+  box-shadow: 0 3px 20px rgba(255,215,0,0.55), inset 0 0 24px rgba(255,215,0,0.1);
+  animation: imperialShine 3s ease-in-out infinite;
+}
+.card-royal.rs-imperial::before {
+  border-color: rgba(255,215,0,0.35);
+}
+.card-royal.rs-imperial .royal-icon,
+.card-royal.rs-imperial .corner { color: #ffd700; }
+.card-royal.rs-imperial .royal-rank {
+  color: #fff9c4;
+  text-shadow: 0 0 10px rgba(255,215,0,0.7);
+  font-size: 0.7rem;
+}
+.card-royal.rs-imperial .royal-bg-icon { color: #ffd700; opacity: 0.12; }
+@keyframes imperialShine {
+  0%, 100% { box-shadow: 0 3px 20px rgba(255,215,0,0.55), inset 0 0 24px rgba(255,215,0,0.1); }
+  50%      { box-shadow: 0 3px 28px rgba(255,215,0,0.85), inset 0 0 32px rgba(255,215,0,0.18); }
+}
+
 .card-back { background: linear-gradient(135deg, #1a237e 0%, #283593 40%, #1a237e 60%, #303f9f 100%); border: 2px solid #5c6bc0; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
 .card-back::before { content: ""; position: absolute; inset: 5px; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; }
 .card-back::after { content: "\265B"; color: rgba(255,255,255,0.1); font-size: 1.8rem; }
@@ -553,7 +577,7 @@ body.on-menu {
       <h3>The Deck (54 cards)</h3>
       <ul>
         <li><strong>40 Knights</strong> — four copies each of A, 2, 3, 4, 5, 6, 7, 8, 9, 10. No suits.</li>
-        <li><strong>12 Royals</strong> — a random mix of Jacks, Queens, and Kings (always 12 total, but the J/Q/K split changes every game).</li>
+        <li><strong>12 Royals</strong> — 12 cards, each independently rolled: 33% Jack, 33% Queen, 33% King, and a <strong>1% chance of an Emperor</strong> (ultra-rare, worth 4 points!). Every game has a different mix.</li>
         <li><strong>2 Jokers</strong> — wild cards.</li>
       </ul>
       <table class="help-table" style="margin-top:8px;">
@@ -563,6 +587,7 @@ body.on-menu {
         <tr><td>Jack (J)</td><td>None (Royal)</td><td>1</td></tr>
         <tr><td>Queen (Q)</td><td>None (Royal)</td><td>2</td></tr>
         <tr><td>King (K)</td><td>None (Royal)</td><td>3</td></tr>
+        <tr><td>Emperor (E) <span style="color:#ffd700;">★</span></td><td>None (Royal)</td><td>4 <em>(1% rare!)</em></td></tr>
         <tr><td>Joker</td><td>Wild — see below</td><td>2 (always)</td></tr>
       </table>
     </div>
@@ -697,6 +722,7 @@ body.on-menu {
         <tr><td>Jack</td><td>1</td></tr>
         <tr><td>Queen</td><td>2</td></tr>
         <tr><td>King</td><td>3</td></tr>
+        <tr><td>Emperor <span style="color:#ffd700;">★</span></td><td>4 <em>(rare!)</em></td></tr>
         <tr><td>Joker</td><td>2 (always)</td></tr>
       </table>
       <p style="margin-top:8px;">The player with the most points wins. Ties are possible.</p>
@@ -983,6 +1009,7 @@ const ROYAL_ICONS = {
   J: {icon: "\u2694\uFE0F", title: "Jack", bg: "\u2694"},
   Q: {icon: "\u265B", title: "Queen", bg: "\u265B"},
   K: {icon: "\u265A", title: "King", bg: "\u265A"},
+  E: {icon: "👑", title: "Emperor", bg: "♛"},
 };
 
 function cardHTML(card, cls) {
@@ -1010,9 +1037,9 @@ function cardHTML(card, cls) {
     `</div>`;
   }
 
-  if (r === "J" || r === "Q" || r === "K") {
+  if (r === "J" || r === "Q" || r === "K" || r === "E") {
     const info = ROYAL_ICONS[r];
-    const pts = {J:1,Q:2,K:3}[r];
+    const pts = {J:1,Q:2,K:3,E:4}[r];
     const sc = style ? "rs-" + style : "rs-crimson";
     return `<div class="card card-royal ${extra} ${sc}">` +
       `<div class="corner corner-tl">${r}</div>` +
