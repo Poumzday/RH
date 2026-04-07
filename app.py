@@ -1,4 +1,9 @@
 import os
+# Eventlet monkey-patch must happen before any other imports when running on Render
+if os.environ.get("RENDER"):
+    import eventlet
+    eventlet.monkey_patch()
+
 import random
 import uuid
 import threading
