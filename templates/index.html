@@ -514,9 +514,12 @@ body.on-menu {
     <h2>Play Online</h2>
     <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
       <button class="btn btn-primary" style="padding:12px;font-size:1rem;" onclick="createRoom()">Create Room</button>
-      <div style="opacity:0.4;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;">or join a room</div>
+      <div style="opacity:0.4;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;">or enter a room code</div>
       <input class="room-input" id="join-code-input" placeholder="CODE" maxlength="4" onkeydown="if(event.key==='Enter')joinRoom()">
-      <button class="btn btn-gold" style="padding:10px;font-size:0.95rem;" onclick="joinRoom()">Join Room</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-gold" style="flex:1;padding:10px;font-size:0.9rem;" onclick="joinRoom()">Join</button>
+        <button class="btn btn-secondary" style="flex:1;padding:10px;font-size:0.9rem;" onclick="spectateRoom()">Spectate</button>
+      </div>
       <div class="room-error" id="join-error"></div>
     </div>
     <button class="btn btn-secondary btn-sm" onclick="backToMenu()">Back</button>
@@ -826,6 +829,13 @@ function joinRoom() {
   socket.emit("join_room_code", {code});
 }
 
+function spectateRoom() {
+  const code = document.getElementById("join-code-input").value.trim();
+  if (!code) { document.getElementById("join-error").textContent = "Enter a room code"; return; }
+  document.getElementById("join-error").textContent = "";
+  socket.emit("spectate_room", {code});
+}
+
 socket.on("room_created", (data) => {
   hideAll();
   const el = document.getElementById("waiting");
@@ -954,7 +964,7 @@ function applyState(s) {
   document.getElementById("ingame-help").style.display = "block";
   selectedIndices = [];
 
-  if (state.phase === "mulligan") {
+  if (state.phase === "mulligan" && !state.is_spectator) {
     showMulligan();
   } else {
     document.getElementById("mulligan-overlay").classList.remove("visible");
@@ -1048,16 +1058,39 @@ function doMulligan(yes) {
 // --- Main render ---
 function render() {
   if (!state) return;
+  const isSpec = state.is_spectator;
   const t = document.getElementById("turn-text");
   if (state.phase === "game_over") { t.textContent = "Game Over"; t.style.color = "#fff"; }
+  else if (isSpec) {
+    t.textContent = "Spectating — Player " + (state.spectator_current_turn || "?") + "'s turn";
+    t.style.color = "#ffd54f";
+  }
   else { t.textContent = state.your_turn ? "Your Turn" : "Opponent's Turn"; t.style.color = state.your_turn ? "#66bb6a" : "#ef9a9a"; }
   document.getElementById("phase-badge").textContent = ({action:"Take Action",deploy:"Deploying",discard_for_b:"Discard 2",forced_attack:"Must Attack",turn_over:"End Turn",discard_excess:"Discard Excess",game_over:"Game Over",mulligan:"Mulligan"})[state.phase]||"";
-  document.getElementById("actions-badge").textContent = state.your_turn && state.phase==="action" ? "Actions: "+state.actions_remaining : "";
+  document.getElementById("actions-badge").textContent = (!isSpec && state.your_turn && state.phase==="action") ? "Actions: "+state.actions_remaining : "";
 
-  // Opponent hand
+  // Section labels depend on mode
+  const labels = document.querySelectorAll(".section-label");
+  if (isSpec) {
+    labels[0].innerHTML = `Player 2's hand (<span id="opp-hand-count">${state.opponent_hand_count}</span>)`;
+    if (labels[1]) labels[1].textContent = "Player 2's board";
+    if (labels[2]) labels[2].textContent = "Player 1's board";
+    if (labels[3]) labels[3].innerHTML = `Player 1's hand (<span id="your-hand-count">${state.your_hand_count||0}</span>)`;
+  } else {
+    labels[0].innerHTML = `Opponent's hand (<span id="opp-hand-count">0</span>)`;
+    if (labels[1]) labels[1].textContent = "Opponent's board";
+    if (labels[2]) labels[2].textContent = "Your board";
+    if (labels[3]) labels[3].textContent = "Your hand";
+  }
+
+  // Opponent hand — spectators see it face-up
   document.getElementById("opp-hand-count").textContent = state.opponent_hand_count;
   const oh = document.getElementById("opp-hand"); oh.innerHTML = "";
-  for (let i=0; i<state.opponent_hand_count; i++) oh.innerHTML += '<div class="card card-back" style="width:45px;height:65px;font-size:0.8rem;"></div>';
+  if (isSpec && state.opponent_hand) {
+    state.opponent_hand.forEach(c => { oh.innerHTML += cardHTML(c); });
+  } else {
+    for (let i=0; i<state.opponent_hand_count; i++) oh.innerHTML += '<div class="card card-back" style="width:45px;height:65px;font-size:0.8rem;"></div>';
+  }
 
   renderBoard("opp-board", state.opponent_board, true);
   const deckEl = document.getElementById("deck-card");
@@ -1102,6 +1135,10 @@ function renderBoard(id, data, isOpp) {
 function renderHand() {
   const el = document.getElementById("your-hand"); el.innerHTML = "";
   const hand = state.hand || [];
+  if (state.is_spectator) {
+    hand.forEach(c => { el.innerHTML += cardHTML(c); });
+    return;
+  }
   const canSel = state.your_turn && ["action","deploy","forced_attack","discard_for_b","discard_excess"].includes(state.phase);
   hand.forEach((card,i) => {
     const sel = selectedIndices.includes(i);
@@ -1161,6 +1198,7 @@ function renderActions() {
   const el = document.getElementById("actions"); el.innerHTML = "";
   hideAllDropZones();
   if (!state || state.phase==="mulligan" || state.phase==="game_over") return;
+  if (state.is_spectator) { el.innerHTML='<div class="action-label" style="opacity:0.6;color:#ffd54f;">SPECTATING</div>'; return; }
   if (!state.your_turn) { el.innerHTML='<div class="action-label" style="opacity:0.5">Waiting for opponent...</div>'; return; }
   const av = state.available_actions, hs = selectedIndices.length > 0;
 

@@ -235,6 +235,64 @@ class Game:
         self.mulligan_decisions = {}
         self.turns_taken = {}
         self.has_bot = False
+        self.spectators = []
+
+    def add_spectator(self, sid):
+        if sid not in self.spectators:
+            self.spectators.append(sid)
+
+    def remove_spectator(self, sid):
+        if sid in self.spectators:
+            self.spectators.remove(sid)
+
+    def get_spectator_state(self):
+        state = {
+            "phase": self.phase,
+            "is_spectator": True,
+            "your_turn": False,
+            "player_number": 0,
+            "hand": [],
+            "board": [],
+            "opponent_hand": [],
+            "opponent_board": [],
+            "opponent_hand_count": 0,
+            "your_hand_count": 0,
+            "deck_count": len(self.deck),
+            "discard_top": self.discard[-1] if self.discard else None,
+            "discard_count": len(self.discard),
+            "actions_remaining": 0,
+            "path": self.path,
+            "available_actions": [],
+            "can_path_b": False,
+            "mulligan_waiting": False,
+            "spectator_current_turn": 0,
+        }
+        if len(self.players) >= 2:
+            p1, p2 = self.players[0], self.players[1]
+            # Spectators see all cards face-up on both boards
+            def board_view(pl):
+                return [{
+                    "cards": unit["cards"], "rank": unit["rank"],
+                    "is_royal": unit["is_royal"], "power": unit["power"],
+                    "revealed": True,
+                    "absorbed": unit.get("absorbed"),
+                } for unit in self.boards[pl]]
+            state["board"] = board_view(p1)
+            state["opponent_board"] = board_view(p2)
+            # Spectators also see both hands face-up
+            state["hand"] = list(self.hands.get(p1, []))
+            state["opponent_hand"] = list(self.hands.get(p2, []))
+            state["your_hand_count"] = len(self.hands.get(p1, []))
+            state["opponent_hand_count"] = len(self.hands.get(p2, []))
+            state["spectator_current_turn"] = self.player_number(self.current_player())
+            if self.phase == "game_over":
+                state["scores"] = {
+                    "you": self.scores.get(p1, 0),
+                    "opponent": self.scores.get(p2, 0),
+                }
+                state["your_board_reveal"] = self.board_reveals.get(p1, [])
+                state["opp_board_reveal"] = self.board_reveals.get(p2, [])
+        return state
 
     def add_player(self, sid):
         self.players.append(sid)
@@ -912,6 +970,15 @@ def broadcast_state(game):
         if logs:
             st["event_logs"] = logs
         socketio.emit("game_state", st, to=sid)
+    for sid in game.spectators:
+        st = game.get_spectator_state()
+        if anim:
+            st["attack_anim"] = anim
+        if deploy:
+            st["deploy_anim"] = deploy
+        if logs:
+            st["event_logs"] = logs
+        socketio.emit("game_state", st, to=sid)
     # Schedule bot move if needed
     schedule_bot(game)
 
@@ -956,8 +1023,28 @@ def on_join_room(data):
     game.add_player(sid)
     join_room(game.id)
     player_game[sid] = game_id
-    del rooms[code]
     broadcast_state(game)
+
+
+@socketio.on("spectate_room")
+def on_spectate_room(data):
+    sid = request.sid
+    code = (data.get("code") or "").strip().upper()
+    if code not in rooms:
+        socketio.emit("join_error", {"msg": "Room not found"}, to=sid)
+        return
+    game_id = rooms[code]
+    if game_id not in games:
+        del rooms[code]
+        socketio.emit("join_error", {"msg": "Room expired"}, to=sid)
+        return
+    game = games[game_id]
+    game.add_spectator(sid)
+    join_room(game.id)
+    player_game[sid] = game_id
+    # Send current state directly to this spectator
+    st = game.get_spectator_state()
+    socketio.emit("game_state", st, to=sid)
 
 
 @socketio.on("join_bot")
@@ -1091,10 +1178,15 @@ def on_disconnect():
     if not game_id or game_id not in games:
         return
     game = games[game_id]
+    if sid in game.spectators:
+        game.remove_spectator(sid)
+        return
     if sid in game.players:
         for p in game.players:
             if p != sid and p != BOT_SID:
                 socketio.emit("opponent_left", to=p)
+        for s in game.spectators:
+            socketio.emit("opponent_left", to=s)
         to_del = [c for c, gid in rooms.items() if gid == game_id]
         for c in to_del:
             del rooms[c]
