@@ -520,6 +520,17 @@ body.on-menu {
 /* In-game help button */
 #ingame-help { position:fixed; top:12px; right:12px; z-index:100; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:50%; width:36px; height:36px; font-size:1.1rem; font-weight:bold; cursor:pointer; display:none; }
 #ingame-help:hover { background:rgba(0,0,0,0.6); }
+
+/* Settings button */
+#settings-btn { position:fixed; top:12px; right:56px; z-index:100; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:50%; width:36px; height:36px; font-size:1.1rem; cursor:pointer; display:none; line-height:36px; text-align:center; }
+#settings-btn:hover { background:rgba(0,0,0,0.6); }
+
+/* Settings panel */
+#settings-panel { position:fixed; top:56px; right:12px; z-index:200; background:rgba(0,0,0,0.85); border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:16px 20px; display:none; min-width:200px; backdrop-filter:blur(8px); }
+#settings-panel h3 { font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; opacity:0.6; margin-bottom:12px; }
+#settings-panel label { font-size:0.8rem; display:block; margin-bottom:4px; }
+#settings-panel input[type="range"] { width:100%; accent-color:#ffd700; cursor:pointer; }
+.vol-value { font-size:0.75rem; opacity:0.5; text-align:right; display:block; margin-top:2px; }
 </style>
 </head>
 <body>
@@ -569,6 +580,14 @@ body.on-menu {
 
 <!-- In-game help button -->
 <button id="ingame-help" onclick="showHelp()">?</button>
+<!-- Settings button & panel -->
+<button id="settings-btn" onclick="toggleSettings()">&#9881;</button>
+<div id="settings-panel">
+  <h3>Settings</h3>
+  <label for="vol-slider">Volume</label>
+  <input type="range" id="vol-slider" min="0" max="100" value="50" oninput="setVolume(this.value)">
+  <span class="vol-value" id="vol-display">50%</span>
+</div>
 
 <!-- Help overlay -->
 <div id="help-overlay">
@@ -830,6 +849,228 @@ const socket = io({transports: ["websocket", "polling"]});
 let state = null;
 let selectedIndices = [];
 document.addEventListener("DOMContentLoaded", setupDropZones);
+
+// ========== SOUND ENGINE (Web Audio API) ==========
+let audioCtx = null;
+let sfxVolume = 0.5;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
+function setVolume(val) {
+  sfxVolume = val / 100;
+  document.getElementById("vol-display").textContent = val + "%";
+  localStorage.setItem("rh_volume", val);
+}
+
+function toggleSettings() {
+  const panel = document.getElementById("settings-panel");
+  panel.style.display = panel.style.display === "block" ? "none" : "block";
+}
+
+// Restore saved volume
+document.addEventListener("DOMContentLoaded", () => {
+  const saved = localStorage.getItem("rh_volume");
+  if (saved !== null) {
+    sfxVolume = saved / 100;
+    document.getElementById("vol-slider").value = saved;
+    document.getElementById("vol-display").textContent = saved + "%";
+  }
+});
+
+// Close settings when clicking outside
+document.addEventListener("click", (e) => {
+  const panel = document.getElementById("settings-panel");
+  const btn = document.getElementById("settings-btn");
+  if (panel.style.display === "block" && !panel.contains(e.target) && e.target !== btn) {
+    panel.style.display = "none";
+  }
+});
+
+// --- Synth helpers ---
+function playTone(freq, dur, type, vol, detune) {
+  const ctx = getAudioCtx();
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vol * sfxVolume, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+  g.connect(ctx.destination);
+  const o = ctx.createOscillator();
+  o.type = type || "sine";
+  o.frequency.value = freq;
+  if (detune) o.detune.value = detune;
+  o.connect(g);
+  o.start(ctx.currentTime);
+  o.stop(ctx.currentTime + dur);
+}
+
+function playNoise(dur, vol) {
+  const ctx = getAudioCtx();
+  const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vol * sfxVolume, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+  g.connect(ctx.destination);
+  src.connect(g);
+  src.start(); src.stop(ctx.currentTime + dur);
+}
+
+// --- DEPLOY sound (same for all cards) ---
+// Quick whoosh + thud
+function sfxDeploy() {
+  playNoise(0.12, 0.25);
+  setTimeout(() => {
+    playTone(120, 0.2, "sine", 0.4);
+    playTone(80, 0.15, "triangle", 0.3);
+  }, 80);
+}
+
+// --- ATTACK sound (initiating an attack) ---
+// Sword slash: fast noise sweep
+function sfxAttack() {
+  const ctx = getAudioCtx();
+  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.25, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass"; hp.frequency.value = 2000;
+  hp.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.2);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.35 * sfxVolume, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+  src.connect(hp); hp.connect(g); g.connect(ctx.destination);
+  src.start(); src.stop(ctx.currentTime + 0.25);
+  playTone(300, 0.08, "sawtooth", 0.2);
+}
+
+// --- KNIGHT DYING (standard) ---
+// Metallic clang + thud
+function sfxKnightDeath(loud) {
+  const v = loud ? 1.0 : 0.6;
+  playTone(800, 0.08, "square", 0.3 * v);
+  playTone(400, 0.15, "sawtooth", 0.25 * v);
+  playNoise(0.15, 0.2 * v);
+  setTimeout(() => {
+    playTone(100, 0.25, "sine", 0.35 * v);
+  }, 100);
+}
+
+// --- KNIGHT 10 DYING (louder, more dramatic) ---
+function sfxKnight10Death() {
+  sfxKnightDeath(true);
+  setTimeout(() => {
+    playTone(200, 0.3, "sawtooth", 0.4);
+    playNoise(0.2, 0.35);
+    playTone(60, 0.4, "sine", 0.5);
+  }, 150);
+}
+
+// --- ACE TRAP ---
+// Eerie spring/zap sound
+function sfxAceTrap() {
+  const ctx = getAudioCtx();
+  const o = ctx.createOscillator();
+  o.type = "sine";
+  o.frequency.setValueAtTime(1200, ctx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.4);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.35 * sfxVolume, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(); o.stop(ctx.currentTime + 0.5);
+  setTimeout(() => {
+    playTone(150, 0.3, "triangle", 0.25);
+    playTone(300, 0.2, "sine", 0.15, 50);
+  }, 200);
+}
+
+// --- JACK DYING ---
+// Quick yelp: rising tone cut short
+function sfxJackDeath() {
+  playTone(350, 0.12, "sawtooth", 0.3);
+  playTone(500, 0.08, "square", 0.2);
+  setTimeout(() => {
+    playTone(200, 0.2, "triangle", 0.25);
+    playNoise(0.1, 0.15);
+  }, 80);
+}
+
+// --- QUEEN DYING ---
+// Graceful descending chime
+function sfxQueenDeath() {
+  playTone(880, 0.15, "sine", 0.3);
+  setTimeout(() => playTone(660, 0.15, "sine", 0.25), 100);
+  setTimeout(() => playTone(440, 0.2, "sine", 0.2), 200);
+  setTimeout(() => {
+    playTone(330, 0.35, "triangle", 0.25);
+    playNoise(0.15, 0.1);
+  }, 300);
+}
+
+// --- KING DYING ---
+// Heavy regal crash: low brass + impact
+function sfxKingDeath() {
+  playTone(220, 0.1, "sawtooth", 0.3);
+  playTone(165, 0.15, "square", 0.25);
+  setTimeout(() => {
+    playTone(110, 0.3, "sawtooth", 0.35);
+    playNoise(0.2, 0.25);
+  }, 100);
+  setTimeout(() => {
+    playTone(80, 0.4, "triangle", 0.3);
+    playTone(55, 0.5, "sine", 0.25);
+  }, 200);
+}
+
+// --- EMPEROR DYING ---
+// Massive: layered deep boom + choir-like + reverberating crash
+function sfxEmperorDeath() {
+  // Choir-like shimmer
+  playTone(440, 0.15, "sine", 0.25);
+  playTone(554, 0.15, "sine", 0.2);
+  playTone(660, 0.15, "sine", 0.2);
+  setTimeout(() => {
+    // Dramatic descending brass
+    playTone(330, 0.2, "sawtooth", 0.35);
+    playTone(220, 0.25, "sawtooth", 0.3);
+    playTone(165, 0.3, "square", 0.25);
+  }, 120);
+  setTimeout(() => {
+    // Deep boom
+    playTone(55, 0.7, "sine", 0.5);
+    playTone(80, 0.5, "triangle", 0.4);
+    playNoise(0.4, 0.35);
+  }, 250);
+  setTimeout(() => {
+    // Final rumble
+    playTone(40, 0.8, "sine", 0.35);
+    playTone(60, 0.6, "triangle", 0.25);
+    playNoise(0.3, 0.2);
+  }, 500);
+}
+
+// --- Dispatch sound by event type ---
+function sfxUnitDeath(unit) {
+  if (!unit) return;
+  if (unit.is_royal) {
+    if (unit.rank === "J") sfxJackDeath();
+    else if (unit.rank === "Q") sfxQueenDeath();
+    else if (unit.rank === "K") sfxKingDeath();
+    else if (unit.rank === "E") sfxEmperorDeath();
+    else sfxKnightDeath(false); // fallback
+  } else {
+    if (unit.rank === "10") sfxKnight10Death();
+    else sfxKnightDeath(false);
+  }
+}
 socket.on("connect", () => console.log("Connected:", socket.id));
 socket.on("connect_error", (e) => console.error("Socket error:", e));
 
@@ -841,6 +1082,8 @@ function hideAll() {
   document.getElementById("waiting").style.display = "none";
   document.getElementById("game").style.display = "none";
   document.getElementById("ingame-help").style.display = "none";
+  document.getElementById("settings-btn").style.display = "none";
+  document.getElementById("settings-panel").style.display = "none";
   document.body.classList.remove("on-menu");
 }
 
@@ -1046,6 +1289,7 @@ function applyState(s) {
   hideAll();
   document.getElementById("game").style.display = "block";
   document.getElementById("ingame-help").style.display = "block";
+  document.getElementById("settings-btn").style.display = "block";
   selectedIndices = [];
 
   if (state.phase === "mulligan" && !state.is_spectator) {
@@ -1419,6 +1663,7 @@ function smallCardHTML(card) {
 }
 
 function playDeployFlash(deploy) {
+  sfxDeploy();
   const isMe = deploy.player === state.player_number;
   const boardEl = document.getElementById(isMe ? "your-board" : "opp-board");
   const handEl = document.getElementById(isMe ? "your-hand" : "opp-hand");
@@ -1474,6 +1719,7 @@ function playAttackAnimation(anim) {
   const STEP_MS = 1800;
 
   const atkName = atkLabel(anim.attacker);
+  sfxAttack();
   if (!steps.length) { addLog(`${atkName} attacks ${anim.side} — no target`); return; }
 
   let stepIdx = 0;
@@ -1485,10 +1731,10 @@ function playAttackAnimation(anim) {
     const dName = defLabel(step.defender);
 
     // Log this step
-    if (step.outcome === "destroyed") addLog(`${atkName} destroys ${dName}` + (step.remaining_power > 0 ? ` (${step.remaining_power} carries)` : ""));
-    else if (step.outcome === "blocked") addLog(`${atkName} blocked by ${dName}`);
-    else if (step.outcome === "both_destroyed") addLog(`${atkName} and ${dName} both destroyed`);
-    else if (step.outcome === "absorbed") addLog(`Ace traps ${atkName}!`);
+    if (step.outcome === "destroyed") { addLog(`${atkName} destroys ${dName}` + (step.remaining_power > 0 ? ` (${step.remaining_power} carries)` : "")); sfxUnitDeath(step.defender); }
+    else if (step.outcome === "blocked") { addLog(`${atkName} blocked by ${dName}`); sfxUnitDeath(anim.attacker); }
+    else if (step.outcome === "both_destroyed") { addLog(`${atkName} and ${dName} both destroyed`); sfxUnitDeath(step.defender); setTimeout(() => sfxUnitDeath(anim.attacker), 200); }
+    else if (step.outcome === "absorbed") { addLog(`Ace traps ${atkName}!`); sfxAceTrap(); }
 
     const flash = document.createElement("div");
     flash.className = "attack-flash";
