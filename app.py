@@ -545,10 +545,16 @@ class Game:
             for unit in self.boards[sid]:
                 pts = 0
                 if unit["is_royal"]:
+                    # In a royal stack, a joker scores as a copy of that royal.
+                    # Pure-joker units (rank "W") still score 2 each (Queen-equivalent).
+                    royal_rank = unit["rank"] if unit["rank"] != "W" else "W"
                     for c in unit["cards"]:
-                        pts += royal_points(c["rank"])
+                        if c["rank"] == "W" and unit["rank"] != "W":
+                            pts += royal_points(royal_rank)
+                        else:
+                            pts += royal_points(c["rank"])
                 else:
-                    # Jokers always score 2 pts each, even in knight units
+                    # Jokers in a knight unit copy the knight's value AND score 2 pts each
                     pts += 2 * sum(1 for c in unit["cards"] if c["rank"] == "W")
                 total += pts
                 reveal.append({
