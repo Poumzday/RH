@@ -321,7 +321,8 @@ class Game:
             self.hands[sid] = [self.deck.pop() for _ in range(5)]
         self.mulligan_decisions[sid] = True
         if len(self.mulligan_decisions) == 2:
-            self.current_turn_idx = 0
+            # Randomize who goes first (coin flip)
+            self.current_turn_idx = random.randint(0, 1)
             self.begin_turn()
 
     def current_player(self):
