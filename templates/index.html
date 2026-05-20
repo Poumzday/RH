@@ -532,22 +532,19 @@ body.on-menu {
 #settings-btn { position:fixed; top:12px; right:56px; z-index:100; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:50%; width:36px; height:36px; font-size:1.1rem; cursor:pointer; display:none; line-height:36px; text-align:center; }
 #settings-btn:hover { background:rgba(0,0,0,0.6); }
 
-/* Game walkthrough overlay */
+/* Game walkthrough overlay — mirrors the real #game layout */
 #walkthrough-overlay { position:fixed; inset:0; background:#1a5c2a; z-index:400; display:none; flex-direction:column; align-items:center; padding:16px; overflow:auto; }
 #walkthrough-overlay.visible { display:flex; }
 .wt-top-bar { width:100%; max-width:900px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
 .wt-top-bar h2 { font-size:1.1rem; letter-spacing:2px; opacity:0.7; }
 .wt-close { background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:6px 14px; font-size:0.85rem; cursor:pointer; }
 .wt-close:hover { background:rgba(0,0,0,0.6); }
-.wt-game { width:100%; max-width:900px; display:flex; flex-direction:column; gap:8px; }
-.wt-status { background:rgba(0,0,0,0.3); border-radius:8px; padding:8px 16px; display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; }
-.wt-section { background:rgba(0,0,0,0.15); border-radius:8px; padding:8px; }
-.wt-section-label { font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; opacity:0.6; margin-bottom:4px; }
-.wt-row { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:4px; min-height:100px; }
-.wt-board { display:flex; align-items:center; justify-content:center; gap:6px; min-height:100px; }
-.wt-mid { display:flex; justify-content:center; gap:24px; align-items:center; padding:6px 0; font-size:0.8rem; opacity:0.7; }
-.wt-mid .wt-pile { display:flex; flex-direction:column; align-items:center; gap:2px; }
-.wt-annotation { background:rgba(0,0,0,0.85); border:1px solid rgba(255,215,0,0.4); border-radius:10px; padding:14px 20px; margin-top:12px; font-size:0.95rem; line-height:1.4; color:#fff8c4; min-height:60px; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,0.4); }
+.wt-game { width:100%; max-width:900px; display:flex; flex-direction:column; }
+.wt-status-bar { background:rgba(0,0,0,0.3); border-radius:8px; padding:8px 16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; flex-wrap:wrap; gap:6px; }
+.wt-status-bar .turn-indicator { font-weight:bold; font-size:1rem; }
+.wt-status-bar .turn-indicator.opp { color:#ef9a9a; }
+.wt-status-bar .turn-indicator.you { color:#aed581; }
+.wt-annotation { background:rgba(0,0,0,0.85); border:1px solid rgba(255,215,0,0.4); border-radius:10px; padding:14px 20px; margin-top:12px; font-size:0.95rem; line-height:1.4; color:#fff8c4; min-height:60px; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,0.4); max-width:900px; width:100%; }
 .wt-annotation strong { color:#ffd700; }
 .wt-controls { display:flex; justify-content:center; gap:10px; margin-top:8px; }
 .wt-controls button { background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:6px 14px; font-size:0.85rem; cursor:pointer; }
@@ -648,29 +645,37 @@ body.on-menu {
   </div>
   <div class="wt-progress"><div class="wt-progress-bar" id="wt-progress-bar" style="width:0%"></div></div>
   <div class="wt-game">
-    <div class="wt-status">
-      <span id="wt-turn-text" style="font-weight:bold;">—</span>
+    <div id="status-bar" class="wt-status-bar">
+      <span class="turn-indicator" id="wt-turn-text">—</span>
       <span><span class="badge" id="wt-phase-badge">—</span> <span class="badge" id="wt-actions-badge"></span></span>
     </div>
-    <div class="wt-section">
-      <div class="wt-section-label">Opponent's hand (<span id="wt-opp-hand-count">0</span>)</div>
-      <div class="wt-row" id="wt-opp-hand"></div>
+    <div class="section">
+      <div class="section-label">Opponent's hand (<span id="wt-opp-hand-count">0</span>)</div>
+      <div class="hand-row" id="wt-opp-hand"></div>
     </div>
-    <div class="wt-section">
-      <div class="wt-section-label">Opponent's board</div>
-      <div class="wt-board" id="wt-opp-board"></div>
+    <div class="section">
+      <div class="section-label">Opponent's board</div>
+      <div class="board-row" style="position:relative;">
+        <span class="board-side-label">LEFT</span>
+        <div id="wt-opp-board" style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;flex:1;"></div>
+        <span class="board-side-label">RIGHT</span>
+      </div>
     </div>
-    <div class="wt-mid">
-      <div class="wt-pile"><span>Deck</span><strong id="wt-deck-count">54</strong></div>
-      <div class="wt-pile"><span>Discard</span><strong id="wt-discard-count">0</strong></div>
+    <div id="middle">
+      <div class="pile"><div class="card card-back" style="display:inline-flex;"></div><div class="pile-label">Deck (<span id="wt-deck-count">0</span>)</div></div>
+      <div class="pile"><div id="wt-discard-card"></div><div class="pile-label">Discard (<span id="wt-discard-count">0</span>)</div></div>
     </div>
-    <div class="wt-section">
-      <div class="wt-section-label">Your board</div>
-      <div class="wt-board" id="wt-your-board"></div>
+    <div class="section">
+      <div class="section-label">Your board</div>
+      <div class="board-row" style="position:relative;">
+        <span class="board-side-label">LEFT</span>
+        <div id="wt-your-board" style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px;flex:1;"></div>
+        <span class="board-side-label">RIGHT</span>
+      </div>
     </div>
-    <div class="wt-section">
-      <div class="wt-section-label">Your hand</div>
-      <div class="wt-row" id="wt-your-hand"></div>
+    <div class="section">
+      <div class="section-label">Your hand</div>
+      <div class="hand-row" id="wt-your-hand"></div>
     </div>
   </div>
   <div class="wt-annotation" id="wt-annotation">Loading...</div>
@@ -1539,212 +1544,249 @@ function playCoinFlip(resultText, landBack) {
 // Reuses cardHTML() and cardBackHTML() for authentic visuals.
 const WALKTHROUGH_FRAMES = [
   {
-    note: "Welcome! This is a sample game between two players showing the main mechanics. Let's go!",
+    note: "Welcome! Let's watch a sample game between two players to see how the mechanics come together.",
     turn: "Game starting…", phase: "Setup", actions: "",
     yourHand: [], oppHandCount: 0, yourBoard: [], oppBoard: [],
-    deckCount: 54, discardCount: 0, duration: 2800,
+    deckCount: 54, discardCount: 0, duration: 2500,
   },
   {
-    note: "<strong>Coin flip!</strong> The game randomly decides who goes first. Player 1 (you) wins the flip.",
+    note: "<strong>Coin flip!</strong> The game randomly decides who goes first. Player 1 (you) wins.",
     turn: "Coin flip…", phase: "Setup", actions: "",
     yourHand: [], oppHandCount: 0, yourBoard: [], oppBoard: [],
     deckCount: 54, discardCount: 0, duration: 2200,
   },
   {
-    note: "Both players draw 5 cards. <strong>Your starting hand:</strong> 8, 9, A, J, and a 5. Decent — keep it.",
+    note: "Both players draw 5 cards. <strong>Your starting hand</strong> is shown below. Your opponent's hand stays face-down — you only see how many cards they have. Keep this hand (no mulligan).",
     turn: "Your turn (P1)", phase: "Mulligan", actions: "",
-    yourHand: [{rank:"8"},{rank:"9"},{rank:"A"},{rank:"J"},{rank:"5"}],
+    yourHand: [{rank:"8"},{rank:"9"},{rank:"J"},{rank:"5"},{rank:"A"}],
     oppHandCount: 5, yourBoard: [], oppBoard: [],
-    deckCount: 44, discardCount: 0, duration: 3500,
+    deckCount: 44, discardCount: 0, duration: 3800,
   },
   {
-    note: "<strong>Turn 1 — Your turn.</strong> You deploy the <strong>8</strong> on the left as a defender. The 8 will protect royals you put behind it later.",
-    turn: "Your turn (P1)", phase: "Action", actions: "1 action used",
-    yourHand: [{rank:"9"},{rank:"A"},{rank:"J"},{rank:"5"}],
+    note: "<strong>Turn 1 — Your turn.</strong> Since your board has <strong>fewer than 3 units</strong>, you get the bonus-deploy rule: you can keep deploying for free until your board hits 3. Start by deploying the <strong>8 on the left</strong>.",
+    turn: "Your turn (P1)", phase: "Deploy bonus", actions: "0/3 units placed",
+    yourHand: [{rank:"9"},{rank:"J"},{rank:"5"},{rank:"A"}],
     oppHandCount: 5,
     yourBoard: [{cards:[{rank:"8"}], rank:"8", is_royal:false}],
     oppBoard: [],
     deckCount: 44, discardCount: 0,
-    highlight: "your-board-last", duration: 3200,
+    highlight: "your-board-last", duration: 4000,
   },
   {
-    note: "<strong>Turn 2 — Opponent's turn.</strong> Opponent draws a card, then deploys a <strong>6</strong> on the right side. Symmetric opening.",
-    turn: "Opponent's turn (P2)", phase: "Action", actions: "1 action used",
-    yourHand: [{rank:"9"},{rank:"A"},{rank:"J"},{rank:"5"}],
-    oppHandCount: 5,
-    yourBoard: [{cards:[{rank:"8"}], rank:"8", is_royal:false}],
-    oppBoard: [{cards:[{rank:"6"}], rank:"6", is_royal:false}],
-    deckCount: 43, discardCount: 0,
-    highlight: "opp-board-last", duration: 3500,
-  },
-  {
-    note: "<strong>Turn 3 — Your turn.</strong> You draw a card (a <strong>King!</strong>) and decide to switch to <strong>Path B: Discard 2, Put 2</strong> — discard 2 cards to get 2 actions this turn instead of 1.",
-    turn: "Your turn (P1)", phase: "Discard 2", actions: "Switching to Path B…",
-    yourHand: [{rank:"9"},{rank:"A"},{rank:"J"},{rank:"5"},{rank:"K"}],
-    oppHandCount: 5,
-    yourBoard: [{cards:[{rank:"8"}], rank:"8", is_royal:false}],
-    oppBoard: [{cards:[{rank:"6"}], rank:"6", is_royal:false}],
-    deckCount: 42, discardCount: 0, duration: 4000,
-  },
-  {
-    note: "You discard the <strong>5 and 9</strong> (your weakest cards). Now you have 2 actions to spend.",
-    turn: "Your turn (P1)", phase: "Action", actions: "2 actions left",
-    yourHand: [{rank:"A"},{rank:"J"},{rank:"K"}],
-    oppHandCount: 5,
-    yourBoard: [{cards:[{rank:"8"}], rank:"8", is_royal:false}],
-    oppBoard: [{cards:[{rank:"6"}], rank:"6", is_royal:false}],
-    deckCount: 42, discardCount: 2, duration: 3000,
-  },
-  {
-    note: "<strong>Action 1:</strong> Deploy the <strong>Jack</strong> on the left, behind the 8 defender. The 8 will protect it from knight attacks.",
-    turn: "Your turn (P1)", phase: "Action", actions: "1 action left",
-    yourHand: [{rank:"A"},{rank:"K"}],
+    note: "Still under 3 units — keep deploying. Place the <strong>Jack on the right</strong>.",
+    turn: "Your turn (P1)", phase: "Deploy bonus", actions: "1/3 units placed",
+    yourHand: [{rank:"9"},{rank:"5"},{rank:"A"}],
     oppHandCount: 5,
     yourBoard: [
       {cards:[{rank:"8"}], rank:"8", is_royal:false},
       {cards:[{rank:"J"}], rank:"J", is_royal:true},
     ],
-    oppBoard: [{cards:[{rank:"6"}], rank:"6", is_royal:false}],
-    deckCount: 42, discardCount: 2,
+    oppBoard: [],
+    deckCount: 44, discardCount: 0,
     highlight: "your-board-last", duration: 3500,
   },
   {
-    note: "<strong>Action 2:</strong> Deploy the <strong>Ace</strong> on the right as a trap. Anything that attacks it gets captured!",
-    turn: "Your turn (P1)", phase: "Action", actions: "Turn ending…",
-    yourHand: [{rank:"K"}],
-    oppHandCount: 5,
-    yourBoard: [
-      {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
-      {cards:[{rank:"A"}], rank:"A", is_royal:false},
-    ],
-    oppBoard: [{cards:[{rank:"6"}], rank:"6", is_royal:false}],
-    deckCount: 42, discardCount: 2,
-    highlight: "your-board-last", duration: 3800,
-  },
-  {
-    note: "<strong>Turn 4 — Opponent's turn.</strong> Opponent draws and deploys a <strong>Queen</strong> behind their 6.",
-    turn: "Opponent's turn (P2)", phase: "Action", actions: "1 action used",
-    yourHand: [{rank:"K"}],
-    oppHandCount: 5,
-    yourBoard: [
-      {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
-      {cards:[{rank:"A"}], rank:"A", is_royal:false},
-    ],
-    oppBoard: [
-      {cards:[{rank:"6"}], rank:"6", is_royal:false},
-      {cards:[{rank:"Q"}], rank:"Q", is_royal:true},
-    ],
-    deckCount: 41, discardCount: 2,
-    highlight: "opp-board-last", duration: 3500,
-  },
-  {
-    note: "<strong>Turn 5 — Your turn.</strong> You draw a <strong>10</strong>. You decide to attack — sending the 10 against opponent's left (the 6).",
-    turn: "Your turn (P1)", phase: "Action", actions: "Attacking…",
-    yourHand: [{rank:"K"},{rank:"10"}],
-    oppHandCount: 5,
-    yourBoard: [
-      {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
-      {cards:[{rank:"A"}], rank:"A", is_royal:false},
-    ],
-    oppBoard: [
-      {cards:[{rank:"6"}], rank:"6", is_royal:false},
-      {cards:[{rank:"Q"}], rank:"Q", is_royal:true},
-    ],
-    deckCount: 40, discardCount: 2, duration: 3500,
-  },
-  {
-    note: "<strong>10 destroys the 6</strong> (10 > 6), then carries <strong>4 power</strong> forward. But the next defender is the <strong>Queen (royal)</strong> — knight vs royal = mutual destruction. Both die!",
+    note: "Final deploy: the <strong>5 on the right</strong>. Now your board has 3 units → the action is consumed. Notice the Jack is now safely in the middle, protected on both sides!",
     turn: "Your turn (P1)", phase: "Turn over", actions: "",
-    yourHand: [{rank:"K"}],
+    yourHand: [{rank:"9"},{rank:"A"}],
     oppHandCount: 5,
     yourBoard: [
       {cards:[{rank:"8"}], rank:"8", is_royal:false},
       {cards:[{rank:"J"}], rank:"J", is_royal:true},
-      {cards:[{rank:"A"}], rank:"A", is_royal:false},
+      {cards:[{rank:"5"}], rank:"5", is_royal:false},
     ],
     oppBoard: [],
-    deckCount: 40, discardCount: 6, duration: 4500,
+    deckCount: 44, discardCount: 0,
+    highlight: "your-board-last", duration: 4200,
   },
   {
-    note: "<strong>Turn 6 — Opponent's turn.</strong> Opponent draws and decides to attack your <strong>Ace trap</strong> with their King — a bad idea! The Ace captures the King onto YOUR board.",
+    note: "<strong>Turn 2 — Opponent's turn.</strong> They use the same bonus-deploy rule and put down 3 units. <strong>You can't see what they are</strong> — only their card backs.",
     turn: "Opponent's turn (P2)", phase: "Turn over", actions: "",
-    yourHand: [{rank:"K"}],
+    yourHand: [{rank:"9"},{rank:"A"}],
     oppHandCount: 5,
     yourBoard: [
       {cards:[{rank:"8"}], rank:"8", is_royal:false},
       {cards:[{rank:"J"}], rank:"J", is_royal:true},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true, absorbed: true},
-    ],
-    oppBoard: [],
-    deckCount: 39, discardCount: 7,
-    highlight: "your-board-last", duration: 5000,
-  },
-  {
-    note: "Skipping ahead a few turns of trading… both players deploy more units. Deck is getting low.",
-    turn: "Several turns later…", phase: "Action", actions: "",
-    yourHand: [{rank:"K"},{rank:"W"},{rank:"7"}],
-    oppHandCount: 4,
-    yourBoard: [
-      {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
+      {cards:[{rank:"5"}], rank:"5", is_royal:false},
     ],
     oppBoard: [
-      {cards:[{rank:"7"},{rank:"7"}], rank:"7", is_royal:false},
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
     ],
-    deckCount: 4, discardCount: 18, duration: 4000,
+    deckCount: 43, discardCount: 0, duration: 4200,
   },
   {
-    note: "<strong>Your turn.</strong> You have a <strong>King</strong> and a <strong>Joker</strong>. Pairing Joker + King makes a single unit worth <strong>6 points</strong> (Joker copies the King). Deploy them together!",
-    turn: "Your turn (P1)", phase: "Action", actions: "1 action used",
+    note: "<strong>Turn 3 — Your turn.</strong> You draw a <strong>7</strong>. Time to probe — attack opponent's right side with your 9.",
+    turn: "Your turn (P1)", phase: "Action", actions: "Attacking…",
+    yourHand: [{rank:"A"},{rank:"7"}],
+    oppHandCount: 5,
+    yourBoard: [
+      {cards:[{rank:"8"}], rank:"8", is_royal:false},
+      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {cards:[{rank:"5"}], rank:"5", is_royal:false},
+    ],
+    oppBoard: [
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+    ],
+    deckCount: 42, discardCount: 0, duration: 3500,
+  },
+  {
+    note: "The attack reveals opp's right defender — a <strong>4</strong>! 9 > 4 → the 4 is destroyed. Your 9 carries 5 power and hits the next defender, revealed as a <strong>Queen</strong> → knight vs royal = <strong>mutual destruction</strong>. The 9 dies too.",
+    turn: "Your turn (P1)", phase: "Turn over", actions: "",
+    yourHand: [{rank:"A"},{rank:"7"}],
+    oppHandCount: 5,
+    yourBoard: [
+      {cards:[{rank:"8"}], rank:"8", is_royal:false},
+      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {cards:[{rank:"5"}], rank:"5", is_royal:false},
+    ],
+    oppBoard: [
+      {hidden:true, cardCount:1},
+    ],
+    deckCount: 42, discardCount: 3, duration: 5000,
+  },
+  {
+    note: "<strong>Turn 4 — Opponent's turn.</strong> They draw and attack your right with a <strong>10</strong>. 10 destroys the 5 (5 power carries), then hits the Jack → <strong>mutual destruction</strong>. The 5 and Jack both die.",
+    turn: "Opponent's turn (P2)", phase: "Turn over", actions: "",
+    yourHand: [{rank:"A"},{rank:"7"}],
+    oppHandCount: 5,
+    yourBoard: [
+      {cards:[{rank:"8"}], rank:"8", is_royal:false},
+    ],
+    oppBoard: [
+      {hidden:true, cardCount:1},
+    ],
+    deckCount: 41, discardCount: 6, duration: 5000,
+  },
+  {
+    note: "<strong>Turn 5 — Your turn.</strong> You draw a <strong>King</strong>. You deploy the <strong>Ace on the right</strong> as a trap (bonus-deploy active since board < 3).",
+    turn: "Your turn (P1)", phase: "Deploy bonus", actions: "",
+    yourHand: [{rank:"7"},{rank:"K"}],
+    oppHandCount: 5,
+    yourBoard: [
+      {cards:[{rank:"8"}], rank:"8", is_royal:false},
+      {cards:[{rank:"A"}], rank:"A", is_royal:false},
+    ],
+    oppBoard: [
+      {hidden:true, cardCount:1},
+    ],
+    deckCount: 40, discardCount: 6,
+    highlight: "your-board-last", duration: 4000,
+  },
+  {
+    note: "Bonus deploy continues — place the <strong>King in the middle</strong> (between the 8 and the Ace, protected). Now board = 3 units, action consumed.",
+    turn: "Your turn (P1)", phase: "Turn over", actions: "",
+    yourHand: [{rank:"7"}],
+    oppHandCount: 5,
+    yourBoard: [
+      {cards:[{rank:"8"}], rank:"8", is_royal:false},
+      {cards:[{rank:"K"}], rank:"K", is_royal:true},
+      {cards:[{rank:"A"}], rank:"A", is_royal:false},
+    ],
+    oppBoard: [
+      {hidden:true, cardCount:1},
+    ],
+    deckCount: 40, discardCount: 6,
+    highlight: "your-board-last", duration: 4200,
+  },
+  {
+    note: "<strong>Turn 6 — Opponent attacks your right (the Ace) with their King.</strong> Bad call — the Ace springs! The King is captured and now sits on YOUR board where the Ace was.",
+    turn: "Opponent's turn (P2)", phase: "Turn over", actions: "",
     yourHand: [{rank:"7"}],
     oppHandCount: 4,
     yourBoard: [
       {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {cards:[{rank:"K"}], rank:"K", is_royal:true},
+      {cards:[{rank:"K"}], rank:"K", is_royal:true, absorbed: true},
+    ],
+    oppBoard: [
+      {hidden:true, cardCount:1},
+    ],
+    deckCount: 39, discardCount: 6,
+    highlight: "your-board-last", duration: 5500,
+  },
+  {
+    note: "<strong>A few turns later…</strong> Both players keep drawing, deploying, and trading. The deck is nearly empty. You've drawn a <strong>Joker</strong>, which is great for pairing.",
+    turn: "Your turn (P1)", phase: "Action", actions: "",
+    yourHand: [{rank:"K"},{rank:"W"},{rank:"4"}],
+    oppHandCount: 3,
+    yourBoard: [
+      {cards:[{rank:"8"}], rank:"8", is_royal:false},
+      {cards:[{rank:"K"}], rank:"K", is_royal:true},
+      {cards:[{rank:"K"}], rank:"K", is_royal:true},
+    ],
+    oppBoard: [
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+    ],
+    deckCount: 3, discardCount: 22, duration: 4500,
+  },
+  {
+    note: "You decide to switch to <strong>Path B: Discard 2, Put 2</strong> — discard 2 cards now to get 2 actions this turn. Great for setting up your final scoring board.",
+    turn: "Your turn (P1)", phase: "Discard 2", actions: "Switching to Path B…",
+    yourHand: [{rank:"K"},{rank:"W"},{rank:"4"}],
+    oppHandCount: 3,
+    yourBoard: [
+      {cards:[{rank:"8"}], rank:"8", is_royal:false},
+      {cards:[{rank:"K"}], rank:"K", is_royal:true},
+      {cards:[{rank:"K"}], rank:"K", is_royal:true},
+    ],
+    oppBoard: [
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+    ],
+    deckCount: 3, discardCount: 22, duration: 4500,
+  },
+  {
+    note: "You discard the <strong>4</strong> and a low card from earlier. <strong>Action 1:</strong> deploy <strong>King + Joker</strong> together as a single unit — Joker copies the King for scoring → worth <strong>6 points</strong>!",
+    turn: "Your turn (P1)", phase: "Deploy (Path B)", actions: "1 action left",
+    yourHand: [],
+    oppHandCount: 3,
+    yourBoard: [
+      {cards:[{rank:"8"}], rank:"8", is_royal:false},
+      {cards:[{rank:"K"}], rank:"K", is_royal:true},
       {cards:[{rank:"K"}], rank:"K", is_royal:true},
       {cards:[{rank:"K"},{rank:"W"}], rank:"K", is_royal:true},
     ],
     oppBoard: [
-      {cards:[{rank:"7"},{rank:"7"}], rank:"7", is_royal:false},
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
     ],
-    deckCount: 4, discardCount: 18,
-    highlight: "your-board-last", duration: 4800,
+    deckCount: 3, discardCount: 24,
+    highlight: "your-board-last", duration: 5500,
   },
   {
-    note: "Deck runs out → <strong>Forced Attack phase.</strong> Both players must attack or discard all their cards each turn. After a few exchanges, both players are out of cards. <strong>Game over!</strong>",
+    note: "Deck runs out → <strong>Forced Attack phase.</strong> Both players must keep attacking or discarding their hand. Eventually both players run out of cards.",
     turn: "Forced attack…", phase: "Forced attack", actions: "",
     yourHand: [],
     oppHandCount: 0,
     yourBoard: [
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {cards:[{rank:"K"}], rank:"K", is_royal:true},
       {cards:[{rank:"K"}], rank:"K", is_royal:true},
       {cards:[{rank:"K"},{rank:"W"}], rank:"K", is_royal:true},
     ],
     oppBoard: [
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {hidden:true, cardCount:1},
     ],
-    deckCount: 0, discardCount: 28, duration: 4500,
+    deckCount: 0, discardCount: 30, duration: 4200,
   },
   {
-    note: "<strong>Final scoring.</strong> You: Jack (1) + King (3) + King+Joker (6) = <strong>10 points</strong>. Opponent: Jack (1) = <strong>1 point</strong>. <strong>You win!</strong> 🎉",
+    note: "<strong>Game over!</strong> All boards revealed. <strong>You:</strong> King (3) + King (3) + King+Joker (6) = <strong>12 points</strong>. <strong>Opponent:</strong> Jack (1) = <strong>1 point</strong>. You win! 🎉",
     turn: "Game over", phase: "Final score", actions: "",
     yourHand: [],
     oppHandCount: 0,
     yourBoard: [
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {cards:[{rank:"K"}], rank:"K", is_royal:true},
       {cards:[{rank:"K"}], rank:"K", is_royal:true},
       {cards:[{rank:"K"},{rank:"W"}], rank:"K", is_royal:true},
     ],
     oppBoard: [
       {cards:[{rank:"J"}], rank:"J", is_royal:true},
     ],
-    deckCount: 0, discardCount: 28, duration: 6000,
+    deckCount: 0, discardCount: 30, duration: 6500,
   },
 ];
 
@@ -1800,13 +1842,26 @@ function showWalkthroughFrame() {
   renderWtOppHand("wt-opp-hand", f.oppHandCount);
   renderWtBoard("wt-your-board", f.yourBoard, false);
   renderWtBoard("wt-opp-board", f.oppBoard, true);
-  // Status bar
-  document.getElementById("wt-turn-text").textContent = f.turn;
+  // Status bar — color-code turn indicator like the real game
+  const turnEl = document.getElementById("wt-turn-text");
+  turnEl.textContent = f.turn;
+  turnEl.classList.remove("you", "opp");
+  if (f.turn && f.turn.toLowerCase().includes("opponent")) turnEl.classList.add("opp");
+  else if (f.turn && f.turn.toLowerCase().includes("your")) turnEl.classList.add("you");
   document.getElementById("wt-phase-badge").textContent = f.phase;
   document.getElementById("wt-actions-badge").textContent = f.actions || "";
   document.getElementById("wt-opp-hand-count").textContent = f.oppHandCount;
   document.getElementById("wt-deck-count").textContent = f.deckCount;
   document.getElementById("wt-discard-count").textContent = f.discardCount;
+  // Discard top card visual
+  const discardEl = document.getElementById("wt-discard-card");
+  if (f.discardTop) {
+    discardEl.innerHTML = cardHTML(f.discardTop);
+  } else if (f.discardCount > 0) {
+    discardEl.innerHTML = '<div class="card card-knight" style="opacity:0.4;"><span style="font-size:0.7rem;">DISCARD</span></div>';
+  } else {
+    discardEl.innerHTML = '<div class="card" style="background:rgba(0,0,0,0.2);border:2px dashed rgba(255,255,255,0.2);"></div>';
+  }
   // Annotation
   document.getElementById("wt-annotation").innerHTML = f.note;
   // Progress bar
@@ -1859,7 +1914,13 @@ function renderWtBoard(id, units, isOpp) {
     const g = document.createElement("div");
     g.className = "unit-group";
     g.style.position = "relative";
-    (u.cards || []).forEach(c => g.innerHTML += cardHTML(c));
+    if (u.hidden) {
+      // Face-down unit (opponent's deployed but unrevealed cards)
+      const count = u.cardCount || 1;
+      for (let j = 0; j < count; j++) g.innerHTML += cardBackHTML();
+    } else {
+      (u.cards || []).forEach(c => g.innerHTML += cardHTML(c));
+    }
     if (u.absorbed) {
       g.innerHTML += `<div style="position:absolute;top:-8px;right:-8px;background:#e94560;color:#fff;font-size:0.65rem;font-weight:bold;padding:2px 6px;border-radius:10px;box-shadow:0 0 6px rgba(233,69,96,0.5);">TRAPPED</div>`;
     }
