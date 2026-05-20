@@ -476,8 +476,8 @@ body.on-menu {
 .example-title { font-size: 0.8rem; font-weight: 700; color: #ffd54f; margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
 .example-desc { font-size: 0.78rem; opacity: 0.8; margin-bottom: 10px; }
 .demo-stage {
-  position: relative; min-height: 130px; display: flex; align-items: center;
-  justify-content: center; gap: 18px; padding: 8px;
+  position: relative; min-height: 150px; display: flex; align-items: center;
+  justify-content: space-between; gap: 12px; padding: 22px 12px 32px;
   background: rgba(0,0,0,0.25); border-radius: 8px; overflow: hidden;
 }
 .demo-side-label {
@@ -486,6 +486,13 @@ body.on-menu {
 }
 .demo-side-label.demo-atk { left: 12px; color: #66bb6a; }
 .demo-side-label.demo-def { right: 12px; color: #ef9a9a; }
+.demo-attacker-group { display: flex; gap: 2px; }
+.demo-attacker-group .card { margin-left: -32px; }
+.demo-attacker-group .card:first-child { margin-left: 0; }
+.demo-board { display: flex; gap: 6px; align-items: center; }
+.demo-board .demo-card-slot { transition: transform 0.4s ease, opacity 0.5s, box-shadow 0.3s; }
+.demo-board .demo-card-slot.targeted { transform: scale(1.1); box-shadow: 0 0 12px 3px rgba(255,235,59,0.5); border-radius: 8px; }
+.demo-attacker-slot.lunging { transform: translateX(40px) scale(1.05); }
 .score-demo { background:rgba(0,0,0,0.25); border-radius:10px; padding:10px 12px; margin-top:10px; }
 .score-demo .score-board { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:10px; margin:8px 0; }
 .score-demo .score-board .unit-group { display:inline-flex; }
@@ -688,23 +695,30 @@ body.on-menu {
       </ul>
 
       <div class="example-demo" data-example="knight-wins">
-        <div class="example-title">Example: Knight wins</div>
-        <div class="example-desc">A 7 attacks a 5. The 7 destroys the 5, then 2 power continues toward the next defender.</div>
-        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="example-title">Example: Knight wins, then is blocked</div>
+        <div class="example-desc">Defender's board: 5, 7, Q, 10. A <strong>7</strong> attacks the left side: it destroys the 5, but only 2 power carries forward, and 2 is too weak to beat the 7 — the attacker is blocked.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender's board</span></div>
+        <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
+      </div>
+
+      <div class="example-demo" data-example="knight-multi-carry">
+        <div class="example-title">Example: Carrying through multiple defenders</div>
+        <div class="example-desc">Defender's board: 7, 10, K, Ace. Attacker plays <strong>9 + 9</strong> (combined power 18) on the left. The 18 destroys the 7 (11 carries), then destroys the 10 (1 carries), but is then blocked by the King — knights cannot break a Royal.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender's board</span></div>
         <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
       </div>
 
       <div class="example-demo" data-example="knight-blocked">
         <div class="example-title">Example: Knight blocked</div>
-        <div class="example-desc">A 5 attacks an 8. The 5 is too weak — it's destroyed, the 8 survives.</div>
-        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="example-desc">Defender's board: 8, Q, 3. A <strong>5</strong> attacks the left — too weak to beat the 8, so the attacker is destroyed and the defenders survive.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender's board</span></div>
         <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
       </div>
 
       <div class="example-demo" data-example="knight-tie">
         <div class="example-title">Example: Mutual destruction</div>
-        <div class="example-desc">A 7 attacks a 7. Equal power — both are destroyed.</div>
-        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="example-desc">Defender's board: 7, K, 4. A <strong>7</strong> attacks the left — equal power against the 7, so both are destroyed.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender's board</span></div>
         <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
       </div>
 
@@ -712,9 +726,16 @@ body.on-menu {
       <p>When you attack with a Royal (J/Q/K), it ignores power: it destroys exactly <strong>one</strong> defender — any defender — then dies itself. Use Royals to take out scary enemies.</p>
 
       <div class="example-demo" data-example="royal-attacks">
-        <div class="example-title">Example: Royal attack</div>
-        <div class="example-desc">A King attacks a 9. The 9 is destroyed, and the King also dies. (Royals are kamikazes.)</div>
-        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="example-title">Example: Royal attack on a single knight</div>
+        <div class="example-desc">Defender's board: 9, 6, J. A <strong>King</strong> attacks the left — the 9 is destroyed, and the King also dies. (Royals are kamikazes.) The 6 and J are untouched.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender's board</span></div>
+        <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
+      </div>
+
+      <div class="example-demo" data-example="royal-attacks-stack">
+        <div class="example-title">Example: Royal attack on a stacked unit</div>
+        <div class="example-desc">Defender's board: <strong>8+8</strong> (a unit of two 8s, power 16), 6, J. A <strong>King</strong> attacks the left — it ignores power and destroys the <em>entire</em> 8+8 unit (both cards discarded), then the King also dies. This is why royals are great against scary stacks.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender's board</span></div>
         <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
       </div>
 
@@ -723,8 +744,8 @@ body.on-menu {
 
       <div class="example-demo" data-example="knight-vs-royal">
         <div class="example-title">Example: Knight hits a Royal</div>
-        <div class="example-desc">A 10 attacks a Queen. Both are destroyed. The 10 cannot break through.</div>
-        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="example-desc">Defender's board: Q, 5, 3. A <strong>10</strong> attacks the left — hits the Queen and both are destroyed. The 10 cannot break through the royal wall.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender's board</span></div>
         <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
       </div>
     </div>
@@ -736,15 +757,15 @@ body.on-menu {
 
       <div class="example-demo" data-example="ace-trap-knight">
         <div class="example-title">Example: Ace traps a Knight</div>
-        <div class="example-desc">An 8 attacks an Ace. The Ace is destroyed, but the 8 is captured and now sits on the opponent's board.</div>
-        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="example-desc">Defender's board: Ace, K, 4. An <strong>8</strong> attacks the left — the Ace springs, the 8 is captured and now sits on the opponent's board (in the Ace's spot). The other defenders are untouched.</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender's board</span></div>
         <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
       </div>
 
       <div class="example-demo" data-example="ace-trap-royal">
         <div class="example-title">Example: Ace traps a King</div>
-        <div class="example-desc">A King attacks an Ace. The Ace dies, but the King is now on the opponent's board — they get the 3 points!</div>
-        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender</span></div>
+        <div class="example-desc">Defender's board: Ace, Q, 6. A <strong>King</strong> attacks the left — the Ace dies, but the King is now on the opponent's board, scoring 3 points for them!</div>
+        <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender's board</span></div>
         <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
       </div>
 
@@ -1174,14 +1195,79 @@ function showHelp() {
 function hideHelp() { document.getElementById("help-overlay").classList.remove("visible"); }
 
 // --- Help example demos ---
+// Each example has an attacker unit (array of cards) and a defender board
+// where each board entry is itself an array of cards (a unit).
+// `steps` describes the sequence of resolutions.
+//   idx: index into the board of the unit the attacker hits
+//   kind: "destroyed" | "blocked" | "tie" | "royal_kill" | "trap"
+//   text: label shown for that step
 const EXAMPLES = {
-  "knight-wins":     {atk: {rank:"7"}, def: {rank:"5"}, kind: "destroyed", text: "5 destroyed (2 power carries)"},
-  "knight-blocked":  {atk: {rank:"5"}, def: {rank:"8"}, kind: "blocked",   text: "Attack blocked — 5 destroyed"},
-  "knight-tie":      {atk: {rank:"7"}, def: {rank:"7"}, kind: "tie",       text: "Both destroyed"},
-  "royal-attacks":   {atk: {rank:"K"}, def: {rank:"9"}, kind: "royal_kill",text: "9 destroyed, King also dies"},
-  "knight-vs-royal": {atk: {rank:"10"},def: {rank:"Q"}, kind: "tie",       text: "Both destroyed"},
-  "ace-trap-knight": {atk: {rank:"8"}, def: {rank:"A"}, kind: "trap",      text: "8 captured by opponent!"},
-  "ace-trap-royal":  {atk: {rank:"K"}, def: {rank:"A"}, kind: "trap",      text: "King captured by opponent!"},
+  "knight-wins": {
+    atk: [{rank:"7"}],
+    board: [[{rank:"5"}], [{rank:"7"}], [{rank:"Q"}], [{rank:"10"}]],
+    steps: [
+      {idx: 0, kind: "destroyed", text: "7 destroys 5 (2 power carries)"},
+      {idx: 1, kind: "blocked",   text: "2 power vs 7 — BLOCKED"},
+    ],
+  },
+  "knight-multi-carry": {
+    atk: [{rank:"9"}, {rank:"9"}],
+    board: [[{rank:"7"}], [{rank:"10"}], [{rank:"K"}], [{rank:"A"}]],
+    steps: [
+      {idx: 0, kind: "destroyed", text: "18 destroys 7 (11 carries)"},
+      {idx: 1, kind: "destroyed", text: "11 destroys 10 (1 carries)"},
+      {idx: 2, kind: "blocked",   text: "1 vs King — BLOCKED (knights can't kill royals)"},
+    ],
+  },
+  "knight-blocked": {
+    atk: [{rank:"5"}],
+    board: [[{rank:"8"}], [{rank:"Q"}], [{rank:"3"}]],
+    steps: [
+      {idx: 0, kind: "blocked", text: "5 vs 8 — BLOCKED"},
+    ],
+  },
+  "knight-tie": {
+    atk: [{rank:"7"}],
+    board: [[{rank:"7"}], [{rank:"K"}], [{rank:"4"}]],
+    steps: [
+      {idx: 0, kind: "tie", text: "Equal power — both destroyed"},
+    ],
+  },
+  "royal-attacks": {
+    atk: [{rank:"K"}],
+    board: [[{rank:"9"}], [{rank:"6"}], [{rank:"J"}]],
+    steps: [
+      {idx: 0, kind: "royal_kill", text: "King destroys 9 — both die"},
+    ],
+  },
+  "royal-attacks-stack": {
+    atk: [{rank:"K"}],
+    board: [[{rank:"8"}, {rank:"8"}], [{rank:"6"}], [{rank:"J"}]],
+    steps: [
+      {idx: 0, kind: "royal_kill", text: "King destroys the 8+8 unit (whole unit dies) — King also dies"},
+    ],
+  },
+  "knight-vs-royal": {
+    atk: [{rank:"10"}],
+    board: [[{rank:"Q"}], [{rank:"5"}], [{rank:"3"}]],
+    steps: [
+      {idx: 0, kind: "tie", text: "10 hits Queen — both destroyed"},
+    ],
+  },
+  "ace-trap-knight": {
+    atk: [{rank:"8"}],
+    board: [[{rank:"A"}], [{rank:"K"}], [{rank:"4"}]],
+    steps: [
+      {idx: 0, kind: "trap", text: "Ace traps the 8 — captured!"},
+    ],
+  },
+  "ace-trap-royal": {
+    atk: [{rank:"K"}],
+    board: [[{rank:"A"}], [{rank:"Q"}], [{rank:"6"}]],
+    steps: [
+      {idx: 0, kind: "trap", text: "Ace traps the King — captured!"},
+    ],
+  },
 };
 
 const SCORE_SCENARIOS = {
@@ -1230,12 +1316,7 @@ function setupExampleDemos() {
     demo.dataset.initialized = "1";
     const ex = EXAMPLES[demo.dataset.example];
     if (!ex) return;
-    const stage = demo.querySelector(".demo-stage");
-    stage.innerHTML += `<div class="demo-card-slot demo-attacker-slot">${cardHTML(ex.atk, "sm-card")}</div>` +
-                       `<div class="demo-vs">VS</div>` +
-                       `<div class="demo-card-slot demo-defender-slot">${cardHTML(ex.def, "sm-card")}</div>` +
-                       `<div class="demo-result"></div>`;
-    // restore the side labels (innerHTML+= would have removed them — actually no, we used += so they're preserved)
+    renderExampleStage(demo, ex);
     const btn = demo.querySelector(".demo-play-btn");
     btn.onclick = () => playExampleDemo(demo);
     // Auto-play once when first opened
@@ -1243,54 +1324,95 @@ function setupExampleDemos() {
   });
 }
 
+function renderExampleStage(demo, ex) {
+  const stage = demo.querySelector(".demo-stage");
+  // Preserve the existing side labels
+  const labels = stage.querySelectorAll(".demo-side-label");
+  stage.innerHTML = "";
+  labels.forEach(l => stage.appendChild(l));
+  // Attacker (left)
+  const atkGroup = document.createElement("div");
+  atkGroup.className = "demo-card-slot demo-attacker-slot";
+  const atkInner = document.createElement("div");
+  atkInner.className = "demo-attacker-group";
+  ex.atk.forEach(c => atkInner.innerHTML += cardHTML(c, "sm-card"));
+  atkGroup.appendChild(atkInner);
+  stage.appendChild(atkGroup);
+  // Defender board (right)
+  const board = document.createElement("div");
+  board.className = "demo-board";
+  ex.board.forEach((unit, i) => {
+    const slot = document.createElement("div");
+    slot.className = "demo-card-slot demo-defender-slot";
+    slot.dataset.idx = i;
+    const inner = document.createElement("div");
+    inner.className = "demo-attacker-group";
+    unit.forEach(c => inner.innerHTML += cardHTML(c, "sm-card"));
+    slot.appendChild(inner);
+    board.appendChild(slot);
+  });
+  stage.appendChild(board);
+  // Result label
+  const result = document.createElement("div");
+  result.className = "demo-result";
+  stage.appendChild(result);
+}
+
 function playExampleDemo(demo) {
   const ex = EXAMPLES[demo.dataset.example];
   if (!ex) return;
+  // Re-render to reset all states
+  renderExampleStage(demo, ex);
   const atkSlot = demo.querySelector(".demo-attacker-slot");
-  const defSlot = demo.querySelector(".demo-defender-slot");
-  const vs = demo.querySelector(".demo-vs");
+  const defSlots = demo.querySelectorAll(".demo-defender-slot");
   const result = demo.querySelector(".demo-result");
 
-  // Reset
-  atkSlot.classList.remove("attacking", "dying", "hidden");
-  defSlot.classList.remove("dying", "hidden");
-  vs.classList.remove("gone");
-  result.classList.remove("show", "win", "loss", "tie", "trap");
-  result.textContent = "";
-  atkSlot.innerHTML = cardHTML(ex.atk, "sm-card");
-  defSlot.innerHTML = cardHTML(ex.def, "sm-card");
-
-  // Step 1: Lunge
-  setTimeout(() => {
-    atkSlot.classList.add("attacking");
-    vs.classList.add("gone");
-  }, 350);
-
-  // Step 2: Resolve
-  setTimeout(() => {
-    if (ex.kind === "destroyed") {
-      defSlot.classList.add("dying");
-      result.classList.add("show", "win");
-    } else if (ex.kind === "blocked") {
-      atkSlot.classList.add("dying");
-      result.classList.add("show", "loss");
-    } else if (ex.kind === "tie") {
-      atkSlot.classList.add("dying");
-      defSlot.classList.add("dying");
-      result.classList.add("show", "tie");
-    } else if (ex.kind === "royal_kill") {
-      defSlot.classList.add("dying");
-      setTimeout(() => atkSlot.classList.add("dying"), 400);
-      result.classList.add("show", "win");
-    } else if (ex.kind === "trap") {
-      // Defender (ace) dies, attacker stays but is "captured"
-      defSlot.classList.add("dying");
-      atkSlot.style.boxShadow = "0 0 16px 4px rgba(156,39,176,0.7)";
-      result.classList.add("show", "trap");
-      setTimeout(() => { atkSlot.style.boxShadow = ""; }, 1500);
-    }
-    result.textContent = ex.text;
-  }, 950);
+  let stepIdx = 0;
+  function runStep() {
+    if (stepIdx >= ex.steps.length) return;
+    const step = ex.steps[stepIdx];
+    const defSlot = defSlots[step.idx];
+    // Clear all targeting highlights
+    defSlots.forEach(s => s.classList.remove("targeted"));
+    // Highlight the current target
+    defSlot.classList.add("targeted");
+    // Lunge
+    setTimeout(() => {
+      atkSlot.classList.add("lunging");
+    }, 250);
+    // Resolve
+    setTimeout(() => {
+      atkSlot.classList.remove("lunging");
+      defSlot.classList.remove("targeted");
+      result.classList.remove("show", "win", "loss", "tie", "trap");
+      if (step.kind === "destroyed") {
+        defSlot.classList.add("dying");
+        result.classList.add("show", "win");
+      } else if (step.kind === "blocked") {
+        atkSlot.classList.add("dying");
+        result.classList.add("show", "loss");
+      } else if (step.kind === "tie") {
+        defSlot.classList.add("dying");
+        atkSlot.classList.add("dying");
+        result.classList.add("show", "tie");
+      } else if (step.kind === "royal_kill") {
+        defSlot.classList.add("dying");
+        setTimeout(() => atkSlot.classList.add("dying"), 400);
+        result.classList.add("show", "win");
+      } else if (step.kind === "trap") {
+        defSlot.classList.add("dying");
+        atkSlot.style.boxShadow = "0 0 16px 4px rgba(156,39,176,0.7)";
+        result.classList.add("show", "trap");
+        setTimeout(() => { atkSlot.style.boxShadow = ""; }, 1500);
+      }
+      result.textContent = step.text;
+      stepIdx++;
+      if (stepIdx < ex.steps.length) {
+        setTimeout(runStep, 1700);
+      }
+    }, 700);
+  }
+  setTimeout(runStep, 200);
 }
 
 socket.on("opponent_left", () => { alert("Opponent disconnected."); location.reload(); });
