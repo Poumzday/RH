@@ -15,7 +15,7 @@ body {
 h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 
 /* Waiting */
-#waiting { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; }
+#waiting { display: none; flex-direction: column; align-items: center; justify-content: center; height: 80vh; }
 .spinner { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; margin-left: 8px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -1703,7 +1703,7 @@ const WALKTHROUGH_FRAMES = [
     deckCount: 0, discardCount: 26, duration: 6000,
   },
   {
-    note: "<strong>Opponent attacks your Ace (left) with their 9</strong> — bad call! The Ace springs and the <strong>9 is captured</strong> onto YOUR board where the Ace was. Opponent now has 0 cards in hand.",
+    note: "<strong>Opponent attacks your Ace (left) with their 9.</strong> The Ace springs and the <strong>9 is captured</strong> onto YOUR board where the Ace was. Opponent now has 0 cards in hand.",
     turn: "Opponent's turn (P2)", phase: "Turn over", actions: "",
     yourHand: [{rank:"5"},{rank:"8"},{rank:"9"}],
     oppHandCount: 0,
@@ -1969,6 +1969,8 @@ async function triggerWalkthroughEndgameAnim(reveal) {
     playAgainBtn.textContent = originalText;
     playAgainBtn.onclick = null;
     if (originalAttrClick) playAgainBtn.setAttribute("onclick", originalAttrClick);
+    // Return the user back to the How to Play instructions
+    showHelp();
   };
   await playEndgameAnimation();
 }
