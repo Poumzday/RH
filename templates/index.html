@@ -1812,7 +1812,7 @@ const WALKTHROUGH_FRAMES = [
     duration: 5500,
   },
   {
-    note: "<strong>Game over!</strong> Both hands empty → boards revealed. <strong>You:</strong> Queen (2) + Jack (1) = <strong>3 points</strong>. <strong>Opponent:</strong> Queen (2) = <strong>2 points</strong>. <strong>You win 3–2!</strong> 🎉",
+    note: "<strong>Game over!</strong> Boards revealed — watch the scoring animation.",
     turn: "Game over", phase: "Final score", actions: "",
     yourHand: [],
     oppHandCount: 0,
@@ -1827,7 +1827,21 @@ const WALKTHROUGH_FRAMES = [
       {cards:[{rank:"5"}], rank:"5", is_royal:false},
       {cards:[{rank:"Q"}], rank:"Q", is_royal:true},
     ],
-    deckCount: 0, discardCount: 33, duration: 7500,
+    deckCount: 0, discardCount: 33, duration: 2500,
+    endgameAnimation: true,
+    endgameReveal: {
+      yours: [
+        {cards:[{rank:"9"}], rank:"9", is_royal:false, points: 0},
+        {cards:[{rank:"Q"}], rank:"Q", is_royal:true, points: 2},
+        {cards:[{rank:"8"}], rank:"8", is_royal:false, points: 0},
+        {cards:[{rank:"J"}], rank:"J", is_royal:true, points: 1},
+        {cards:[{rank:"10"}], rank:"10", is_royal:false, points: 0},
+      ],
+      opps: [
+        {cards:[{rank:"5"}], rank:"5", is_royal:false, points: 0},
+        {cards:[{rank:"Q"}], rank:"Q", is_royal:true, points: 2},
+      ],
+    },
   },
 ];
 
@@ -1924,8 +1938,39 @@ function showWalkthroughFrame() {
   // Disable prev/next at bounds
   document.getElementById("wt-prev-btn").disabled = (walkthroughIdx === 0);
   document.getElementById("wt-next-btn").disabled = (walkthroughIdx === WALKTHROUGH_FRAMES.length - 1);
+  // If this is the endgame frame, schedule the gameover animation
+  if (f.endgameAnimation) {
+    setTimeout(() => triggerWalkthroughEndgameAnim(f.endgameReveal), (f.duration || 2500) - 200);
+    return; // skip the regular auto-advance
+  }
   // Auto-advance
   if (!walkthroughPaused) scheduleNextWalkthroughFrame();
+}
+
+async function triggerWalkthroughEndgameAnim(reveal) {
+  // Hide the walkthrough overlay and use the real game's endgame animation
+  document.getElementById("walkthrough-overlay").classList.remove("visible");
+  document.querySelectorAll("#walkthrough-overlay .attack-flash").forEach(e => e.remove());
+  // Save current state and inject mock reveal data
+  const savedState = state;
+  state = {
+    your_board_reveal: reveal.yours,
+    opp_board_reveal: reveal.opps,
+  };
+  // Override the "Play Again" button so it doesn't reload — just dismisses
+  const playAgainBtn = document.querySelector("#gameover-overlay .btn-primary");
+  const originalText = playAgainBtn.textContent;
+  const originalAttrClick = playAgainBtn.getAttribute("onclick");
+  playAgainBtn.removeAttribute("onclick");
+  playAgainBtn.textContent = "Close";
+  playAgainBtn.onclick = () => {
+    document.getElementById("gameover-overlay").classList.remove("visible");
+    state = savedState;
+    playAgainBtn.textContent = originalText;
+    playAgainBtn.onclick = null;
+    if (originalAttrClick) playAgainBtn.setAttribute("onclick", originalAttrClick);
+  };
+  await playEndgameAnimation();
 }
 
 function scheduleNextWalkthroughFrame() {
