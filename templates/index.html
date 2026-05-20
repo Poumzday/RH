@@ -813,17 +813,6 @@ body.on-menu {
       </div>
     </div>
 
-    <div class="help-section">
-      <h3>Strategy Tips</h3>
-      <ul>
-        <li>Royals score points but die easily on attack. Most of the time you want to <strong>protect</strong> them on your board, not send them out.</li>
-        <li>Always have non-Royal "shield" units in front of your Royals. Otherwise the opponent can pick them off with a Royal of their own.</li>
-        <li>Aces are a great cheap defender — attackers will think twice before stepping on them.</li>
-        <li>Never attack an Ace with your King unless you really know what you're doing — you might just gift them 3 points.</li>
-        <li>Save Jokers for high-value pairings: Joker + King = 6 points (acts as 2 Kings); or pair a Joker with your strongest knight to make a powerhouse attacker.</li>
-      </ul>
-    </div>
-
     <div class="help-close">
       <button class="btn btn-primary" onclick="hideHelp()">Got it</button>
     </div>
@@ -1274,24 +1263,22 @@ const SCORE_SCENARIOS = {
   a: {
     units: [
       [{rank:"5"}],
-      [{rank:"K"}],
+      [{rank:"Q"}, {rank:"Q"}],
       [{rank:"9"}, {rank:"9"}],
-      [{rank:"Q"}],
       [{rank:"W"}, {rank:"7"}],
       [{rank:"3"}],
     ],
-    calc: "King (3) + Queen (2) + Joker (2, even in a knight unit) = 7 points  •  Knights score 0",
+    calc: "Stacked Queens (2+2=4) + Joker in a knight unit (2) = 6 points  •  Knights score 0",
   },
   b: {
     units: [
       [{rank:"8"}],
-      [{rank:"E"}],
+      [{rank:"K"}, {rank:"W"}],
       [{rank:"4"}, {rank:"4"}],
-      [{rank:"W"}],
       [{rank:"6"}],
       [{rank:"J"}],
     ],
-    calc: "Emperor (4) + Joker alone (2) + Jack (1) = 7 points  •  Knights score 0",
+    calc: "King + Joker (3+3=6, Joker copies the King) + Jack (1) = 7 points  •  Knights score 0",
   },
 };
 
