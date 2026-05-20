@@ -2271,15 +2271,15 @@ function addLog(msg) {
 }
 function addTurnSeparator(label) {
   logTurns.push([]);
-  // Keep only last 2 turns + current
-  if (logTurns.length > 3) logTurns.splice(0, logTurns.length - 3);
+  // Keep only last 3 turns + current in the buffer
+  if (logTurns.length > 4) logTurns.splice(0, logTurns.length - 4);
   logTurns[logTurns.length - 1].push({sep: label});
   renderLog();
 }
 function renderLog() {
   const el = document.getElementById("event-log");
-  // Show last 2 turns
-  const show = logTurns.slice(-2);
+  // Show last 3 turns
+  const show = logTurns.slice(-3);
   let html = "";
   for (const turn of show) {
     for (const m of turn) {
