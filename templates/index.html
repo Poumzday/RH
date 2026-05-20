@@ -1542,9 +1542,21 @@ function playCoinFlip(resultText, landBack) {
 // ========== GAME WALKTHROUGH ==========
 // A scripted full-game playthrough. Each frame: hands, boards, status, annotation.
 // Reuses cardHTML() and cardBackHTML() for authentic visuals.
+// Convenient handy references for the board states used across frames
+const _yourBoardAfterDeploys = [
+  {cards:[{rank:"8"}], rank:"8", is_royal:false},
+  {cards:[{rank:"J"}], rank:"J", is_royal:true},
+  {cards:[{rank:"10"}], rank:"10", is_royal:false},
+];
+const _oppBoardFaceDown = [
+  {hidden:true, cardCount:1},
+  {hidden:true, cardCount:1},
+  {hidden:true, cardCount:1},
+];
+
 const WALKTHROUGH_FRAMES = [
   {
-    note: "Welcome! Let's watch a sample game between two players to see how the mechanics come together.",
+    note: "Welcome! Let's watch a quick sample game to see how the mechanics come together.",
     turn: "Game starting…", phase: "Setup", actions: "",
     yourHand: [], oppHandCount: 0, yourBoard: [], oppBoard: [],
     deckCount: 54, discardCount: 0, duration: 2500,
@@ -1556,26 +1568,26 @@ const WALKTHROUGH_FRAMES = [
     deckCount: 54, discardCount: 0, duration: 2200,
   },
   {
-    note: "Both players draw 5 cards. <strong>Your starting hand</strong> is shown below. Your opponent's hand stays face-down — you only see how many cards they have. Keep this hand (no mulligan).",
+    note: "Both players draw 5 cards. <strong>Your hand:</strong> 8, J, 10, 2, 6. Opponent's hand stays face-down — you only see the count. Keep this hand (no mulligan).",
     turn: "Your turn (P1)", phase: "Mulligan", actions: "",
-    yourHand: [{rank:"8"},{rank:"9"},{rank:"J"},{rank:"5"},{rank:"A"}],
+    yourHand: [{rank:"8"},{rank:"J"},{rank:"10"},{rank:"2"},{rank:"6"}],
     oppHandCount: 5, yourBoard: [], oppBoard: [],
-    deckCount: 44, discardCount: 0, duration: 3800,
+    deckCount: 44, discardCount: 0, duration: 4000,
   },
   {
     note: "<strong>Turn 1 — Your turn.</strong> Since your board has <strong>fewer than 3 units</strong>, you get the bonus-deploy rule: you can keep deploying for free until your board hits 3. Start by deploying the <strong>8 on the left</strong>.",
-    turn: "Your turn (P1)", phase: "Deploy bonus", actions: "0/3 units placed",
-    yourHand: [{rank:"9"},{rank:"J"},{rank:"5"},{rank:"A"}],
+    turn: "Your turn (P1)", phase: "Deploy bonus", actions: "1/3 placed",
+    yourHand: [{rank:"J"},{rank:"10"},{rank:"2"},{rank:"6"}],
     oppHandCount: 5,
     yourBoard: [{cards:[{rank:"8"}], rank:"8", is_royal:false}],
     oppBoard: [],
     deckCount: 44, discardCount: 0,
-    highlight: "your-board-last", duration: 4000,
+    highlight: "your-board-last", duration: 3800,
   },
   {
     note: "Still under 3 units — keep deploying. Place the <strong>Jack on the right</strong>.",
-    turn: "Your turn (P1)", phase: "Deploy bonus", actions: "1/3 units placed",
-    yourHand: [{rank:"9"},{rank:"5"},{rank:"A"}],
+    turn: "Your turn (P1)", phase: "Deploy bonus", actions: "2/3 placed",
+    yourHand: [{rank:"10"},{rank:"2"},{rank:"6"}],
     oppHandCount: 5,
     yourBoard: [
       {cards:[{rank:"8"}], rank:"8", is_royal:false},
@@ -1586,207 +1598,201 @@ const WALKTHROUGH_FRAMES = [
     highlight: "your-board-last", duration: 3500,
   },
   {
-    note: "Final deploy: the <strong>5 on the right</strong>. Now your board has 3 units → the action is consumed. Notice the Jack is now safely in the middle, protected on both sides!",
+    note: "Final deploy: the <strong>10 on the right</strong>. Board hits 3 units → the action ends. The Jack is now safely <strong>in the middle</strong>, protected by the 8 and the 10.",
     turn: "Your turn (P1)", phase: "Turn over", actions: "",
-    yourHand: [{rank:"9"},{rank:"A"}],
+    yourHand: [{rank:"2"},{rank:"6"}],
     oppHandCount: 5,
-    yourBoard: [
-      {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
-      {cards:[{rank:"5"}], rank:"5", is_royal:false},
-    ],
+    yourBoard: _yourBoardAfterDeploys,
     oppBoard: [],
     deckCount: 44, discardCount: 0,
     highlight: "your-board-last", duration: 4200,
   },
   {
-    note: "<strong>Turn 2 — Opponent's turn.</strong> They use the same bonus-deploy rule and put down 3 units. <strong>You can't see what they are</strong> — only their card backs.",
+    note: "<strong>Turn 2 — Opponent's turn.</strong> Opponent uses the same bonus-deploy rule and puts down 3 units. <strong>You can't see what they are</strong> — they're face-down to you.",
     turn: "Opponent's turn (P2)", phase: "Turn over", actions: "",
-    yourHand: [{rank:"9"},{rank:"A"}],
-    oppHandCount: 5,
-    yourBoard: [
-      {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
-      {cards:[{rank:"5"}], rank:"5", is_royal:false},
-    ],
-    oppBoard: [
-      {hidden:true, cardCount:1},
-      {hidden:true, cardCount:1},
-      {hidden:true, cardCount:1},
-    ],
-    deckCount: 43, discardCount: 0, duration: 4200,
+    yourHand: [{rank:"2"},{rank:"6"}],
+    oppHandCount: 2,
+    yourBoard: _yourBoardAfterDeploys,
+    oppBoard: _oppBoardFaceDown,
+    deckCount: 44, discardCount: 0, duration: 4200,
   },
   {
-    note: "<strong>Turn 3 — Your turn.</strong> You draw a <strong>7</strong>. Time to probe — attack opponent's right side with your 9.",
+    note: "<strong>Turn 3 — Your turn.</strong> You draw a <strong>6</strong>. Your hand: 2, 6, 6. You decide to probe opponent's right side with your weakest card — attack with the <strong>2</strong>.",
     turn: "Your turn (P1)", phase: "Action", actions: "Attacking…",
-    yourHand: [{rank:"A"},{rank:"7"}],
-    oppHandCount: 5,
+    yourHand: [{rank:"2"},{rank:"6"},{rank:"6"}],
+    oppHandCount: 2,
+    yourBoard: _yourBoardAfterDeploys,
+    oppBoard: _oppBoardFaceDown,
+    deckCount: 43, discardCount: 0, duration: 3800,
+  },
+  {
+    note: "The attack reveals opp's right defender — a <strong>5</strong>! 2 &lt; 5 → <strong>BLOCKED</strong>. Your 2 is destroyed, the 5 stays.",
+    turn: "Your turn (P1)", phase: "Turn over", actions: "",
+    yourHand: [{rank:"6"},{rank:"6"}],
+    oppHandCount: 2,
+    yourBoard: _yourBoardAfterDeploys,
+    oppBoard: _oppBoardFaceDown,
+    deckCount: 43, discardCount: 1,
+    attack: {target: "opp-right", atk: [{rank:"2"}], def: [{rank:"5"}], outcome: "blocked"},
+    duration: 4500,
+  },
+  {
+    note: "<strong>Turn 4 — Opponent's turn.</strong> Opponent draws and attacks your <strong>left side (the 8) with a 7</strong>. 7 &lt; 8 → <strong>BLOCKED</strong>. Their 7 is destroyed.",
+    turn: "Opponent's turn (P2)", phase: "Turn over", actions: "",
+    yourHand: [{rank:"6"},{rank:"6"}],
+    oppHandCount: 2,
+    yourBoard: _yourBoardAfterDeploys,
+    oppBoard: _oppBoardFaceDown,
+    deckCount: 42, discardCount: 2,
+    attack: {target: "your-left", atk: [{rank:"7"}], def: [{rank:"8"}], outcome: "blocked"},
+    duration: 4800,
+  },
+  {
+    note: "<strong>Turn 5 — Your turn.</strong> You draw a <strong>4</strong>. Hand: 6, 6, 4. Time to attack opponent's right side again — this time with a <strong>6</strong>.",
+    turn: "Your turn (P1)", phase: "Action", actions: "Attacking…",
+    yourHand: [{rank:"6"},{rank:"6"},{rank:"4"}],
+    oppHandCount: 2,
+    yourBoard: _yourBoardAfterDeploys,
+    oppBoard: _oppBoardFaceDown,
+    deckCount: 41, discardCount: 2, duration: 3800,
+  },
+  {
+    note: "<strong>6 vs 5 → destroys the 5</strong>, 1 power carries forward. Next defender is revealed as a <strong>King</strong>! Knight vs royal = <strong>MUTUAL DESTRUCTION</strong>. The King dies AND your attacker dies.",
+    turn: "Your turn (P1)", phase: "Turn over", actions: "",
+    yourHand: [{rank:"6"},{rank:"4"}],
+    oppHandCount: 2,
+    yourBoard: _yourBoardAfterDeploys,
+    oppBoard: [{hidden:true, cardCount:1}],
+    deckCount: 41, discardCount: 5,
+    attack: {target: "opp-right", atk: [{rank:"6"}], def: [{rank:"K"}], outcome: "both_destroyed"},
+    duration: 5500,
+  },
+  {
+    note: "<strong>Fast-forward to the end of the game.</strong> Many turns of trading later — the deck is empty (forced-attack phase). Your board has grown to <strong>Ace, Queen, 8, Jack, 10</strong>. You have 3 cards left in hand (5, 8, 9). Opponent has 1 card left in hand and 5 face-down units on their board.",
+    turn: "Opponent's turn (P2)", phase: "Forced attack", actions: "",
+    yourHand: [{rank:"5"},{rank:"8"},{rank:"9"}],
+    oppHandCount: 1,
     yourBoard: [
+      {cards:[{rank:"A"}], rank:"A", is_royal:false},
+      {cards:[{rank:"Q"}], rank:"Q", is_royal:true},
       {cards:[{rank:"8"}], rank:"8", is_royal:false},
       {cards:[{rank:"J"}], rank:"J", is_royal:true},
-      {cards:[{rank:"5"}], rank:"5", is_royal:false},
+      {cards:[{rank:"10"}], rank:"10", is_royal:false},
     ],
     oppBoard: [
       {hidden:true, cardCount:1},
       {hidden:true, cardCount:1},
       {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
     ],
-    deckCount: 42, discardCount: 0, duration: 3500,
+    deckCount: 0, discardCount: 26, duration: 6000,
   },
   {
-    note: "The attack reveals opp's right defender — a <strong>4</strong>! 9 > 4 → the 4 is destroyed. Your 9 carries 5 power and hits the next defender, revealed as a <strong>Queen</strong> → knight vs royal = <strong>mutual destruction</strong>. The 9 dies too.",
-    turn: "Your turn (P1)", phase: "Turn over", actions: "",
-    yourHand: [{rank:"A"},{rank:"7"}],
-    oppHandCount: 5,
+    note: "<strong>Opponent attacks your Ace (left) with their 9</strong> — bad call! The Ace springs and the <strong>9 is captured</strong> onto YOUR board where the Ace was. Opponent now has 0 cards in hand.",
+    turn: "Opponent's turn (P2)", phase: "Turn over", actions: "",
+    yourHand: [{rank:"5"},{rank:"8"},{rank:"9"}],
+    oppHandCount: 0,
     yourBoard: [
+      {cards:[{rank:"9"}], rank:"9", is_royal:false, absorbed: true},
+      {cards:[{rank:"Q"}], rank:"Q", is_royal:true},
       {cards:[{rank:"8"}], rank:"8", is_royal:false},
       {cards:[{rank:"J"}], rank:"J", is_royal:true},
-      {cards:[{rank:"5"}], rank:"5", is_royal:false},
+      {cards:[{rank:"10"}], rank:"10", is_royal:false},
     ],
     oppBoard: [
       {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
     ],
-    deckCount: 42, discardCount: 3, duration: 5000,
+    deckCount: 0, discardCount: 27,
+    attack: {target: "your-left", atk: [{rank:"9"}], def: [{rank:"A"}], outcome: "trap"},
+    duration: 6000,
   },
   {
-    note: "<strong>Turn 4 — Opponent's turn.</strong> They draw and attack your right with a <strong>10</strong>. 10 destroys the 5 (5 power carries), then hits the Jack → <strong>mutual destruction</strong>. The 5 and Jack both die.",
-    turn: "Opponent's turn (P2)", phase: "Turn over", actions: "",
-    yourHand: [{rank:"A"},{rank:"7"}],
-    oppHandCount: 5,
+    note: "<strong>Your turn (forced attack).</strong> Try the 5 against opp's right side. Their right defender is revealed as a <strong>9</strong>. 5 &lt; 9 → <strong>BLOCKED</strong>. Your 5 dies.",
+    turn: "Your turn (P1)", phase: "Forced attack", actions: "",
+    yourHand: [{rank:"8"},{rank:"9"}],
+    oppHandCount: 0,
     yourBoard: [
+      {cards:[{rank:"9"}], rank:"9", is_royal:false, absorbed: true},
+      {cards:[{rank:"Q"}], rank:"Q", is_royal:true},
       {cards:[{rank:"8"}], rank:"8", is_royal:false},
+      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {cards:[{rank:"10"}], rank:"10", is_royal:false},
     ],
     oppBoard: [
       {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
     ],
-    deckCount: 41, discardCount: 6, duration: 5000,
+    deckCount: 0, discardCount: 28,
+    attack: {target: "opp-right", atk: [{rank:"5"}], def: [{rank:"9"}], outcome: "blocked"},
+    duration: 5500,
   },
   {
-    note: "<strong>Turn 5 — Your turn.</strong> You draw a <strong>King</strong>. You deploy the <strong>Ace on the right</strong> as a trap (bonus-deploy active since board < 3).",
-    turn: "Your turn (P1)", phase: "Deploy bonus", actions: "",
-    yourHand: [{rank:"7"},{rank:"K"}],
-    oppHandCount: 5,
+    note: "<strong>Your turn.</strong> Send your <strong>9 against their 9</strong>. Equal power → <strong>MUTUAL DESTRUCTION</strong>. Both 9s die. Opp's right side is now wide open.",
+    turn: "Your turn (P1)", phase: "Forced attack", actions: "",
+    yourHand: [{rank:"8"}],
+    oppHandCount: 0,
     yourBoard: [
+      {cards:[{rank:"9"}], rank:"9", is_royal:false, absorbed: true},
+      {cards:[{rank:"Q"}], rank:"Q", is_royal:true},
       {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"A"}], rank:"A", is_royal:false},
-    ],
-    oppBoard: [
-      {hidden:true, cardCount:1},
-    ],
-    deckCount: 40, discardCount: 6,
-    highlight: "your-board-last", duration: 4000,
-  },
-  {
-    note: "Bonus deploy continues — place the <strong>King in the middle</strong> (between the 8 and the Ace, protected). Now board = 3 units, action consumed.",
-    turn: "Your turn (P1)", phase: "Turn over", actions: "",
-    yourHand: [{rank:"7"}],
-    oppHandCount: 5,
-    yourBoard: [
-      {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
-      {cards:[{rank:"A"}], rank:"A", is_royal:false},
-    ],
-    oppBoard: [
-      {hidden:true, cardCount:1},
-    ],
-    deckCount: 40, discardCount: 6,
-    highlight: "your-board-last", duration: 4200,
-  },
-  {
-    note: "<strong>Turn 6 — Opponent attacks your right (the Ace) with their King.</strong> Bad call — the Ace springs! The King is captured and now sits on YOUR board where the Ace was.",
-    turn: "Opponent's turn (P2)", phase: "Turn over", actions: "",
-    yourHand: [{rank:"7"}],
-    oppHandCount: 4,
-    yourBoard: [
-      {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true, absorbed: true},
-    ],
-    oppBoard: [
-      {hidden:true, cardCount:1},
-    ],
-    deckCount: 39, discardCount: 6,
-    highlight: "your-board-last", duration: 5500,
-  },
-  {
-    note: "<strong>A few turns later…</strong> Both players keep drawing, deploying, and trading. The deck is nearly empty. You've drawn a <strong>Joker</strong>, which is great for pairing.",
-    turn: "Your turn (P1)", phase: "Action", actions: "",
-    yourHand: [{rank:"K"},{rank:"W"},{rank:"4"}],
-    oppHandCount: 3,
-    yourBoard: [
-      {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
+      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {cards:[{rank:"10"}], rank:"10", is_royal:false},
     ],
     oppBoard: [
       {hidden:true, cardCount:1},
       {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
     ],
-    deckCount: 3, discardCount: 22, duration: 4500,
+    deckCount: 0, discardCount: 30,
+    attack: {target: "opp-right", atk: [{rank:"9"}], def: [{rank:"9"}], outcome: "both_destroyed"},
+    duration: 5500,
   },
   {
-    note: "You decide to switch to <strong>Path B: Discard 2, Put 2</strong> — discard 2 cards now to get 2 actions this turn. Great for setting up your final scoring board.",
-    turn: "Your turn (P1)", phase: "Discard 2", actions: "Switching to Path B…",
-    yourHand: [{rank:"K"},{rank:"W"},{rank:"4"}],
-    oppHandCount: 3,
-    yourBoard: [
-      {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
-    ],
-    oppBoard: [
-      {hidden:true, cardCount:1},
-      {hidden:true, cardCount:1},
-    ],
-    deckCount: 3, discardCount: 22, duration: 4500,
-  },
-  {
-    note: "You discard the <strong>4</strong> and a low card from earlier. <strong>Action 1:</strong> deploy <strong>King + Joker</strong> together as a single unit — Joker copies the King for scoring → worth <strong>6 points</strong>!",
-    turn: "Your turn (P1)", phase: "Deploy (Path B)", actions: "1 action left",
-    yourHand: [],
-    oppHandCount: 3,
-    yourBoard: [
-      {cards:[{rank:"8"}], rank:"8", is_royal:false},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
-      {cards:[{rank:"K"},{rank:"W"}], rank:"K", is_royal:true},
-    ],
-    oppBoard: [
-      {hidden:true, cardCount:1},
-      {hidden:true, cardCount:1},
-    ],
-    deckCount: 3, discardCount: 24,
-    highlight: "your-board-last", duration: 5500,
-  },
-  {
-    note: "Deck runs out → <strong>Forced Attack phase.</strong> Both players must keep attacking or discarding their hand. Eventually both players run out of cards.",
-    turn: "Forced attack…", phase: "Forced attack", actions: "",
+    note: "<strong>Final attack.</strong> Your <strong>8 attacks right</strong>. Reveals a <strong>7</strong> → 8 destroys 7 (1 power carries). Next defender is a <strong>Queen</strong> → <strong>MUTUAL DESTRUCTION</strong>. The Queen and your 8 both die.",
+    turn: "Your turn (P1)", phase: "Forced attack", actions: "",
     yourHand: [],
     oppHandCount: 0,
     yourBoard: [
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
-      {cards:[{rank:"K"},{rank:"W"}], rank:"K", is_royal:true},
+      {cards:[{rank:"9"}], rank:"9", is_royal:false, absorbed: true},
+      {cards:[{rank:"Q"}], rank:"Q", is_royal:true},
+      {cards:[{rank:"8"}], rank:"8", is_royal:false},
+      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {cards:[{rank:"10"}], rank:"10", is_royal:false},
     ],
     oppBoard: [
       {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
     ],
-    deckCount: 0, discardCount: 30, duration: 4200,
+    deckCount: 0, discardCount: 33,
+    attack: {target: "opp-right", atk: [{rank:"8"}], def: [{rank:"Q"}], outcome: "both_destroyed"},
+    duration: 6000,
   },
   {
-    note: "<strong>Game over!</strong> All boards revealed. <strong>You:</strong> King (3) + King (3) + King+Joker (6) = <strong>12 points</strong>. <strong>Opponent:</strong> Jack (1) = <strong>1 point</strong>. You win! 🎉",
+    note: "<strong>Game over!</strong> Both hands empty → boards revealed. <strong>You:</strong> Queen (2) + Jack (1) = <strong>3 points</strong>. <strong>Opponent:</strong> Queen (2) = <strong>2 points</strong>. <strong>You win 3–2!</strong> 🎉",
     turn: "Game over", phase: "Final score", actions: "",
     yourHand: [],
     oppHandCount: 0,
     yourBoard: [
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
-      {cards:[{rank:"K"}], rank:"K", is_royal:true},
-      {cards:[{rank:"K"},{rank:"W"}], rank:"K", is_royal:true},
+      {cards:[{rank:"9"}], rank:"9", is_royal:false, absorbed: true},
+      {cards:[{rank:"Q"}], rank:"Q", is_royal:true},
+      {cards:[{rank:"8"}], rank:"8", is_royal:false},
+      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {cards:[{rank:"10"}], rank:"10", is_royal:false},
     ],
     oppBoard: [
-      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {cards:[{rank:"5"}], rank:"5", is_royal:false},
+      {cards:[{rank:"Q"}], rank:"Q", is_royal:true},
     ],
-    deckCount: 0, discardCount: 30, duration: 6500,
+    deckCount: 0, discardCount: 33, duration: 7500,
   },
 ];
 
@@ -1805,6 +1811,7 @@ function openWalkthrough() {
 
 function closeWalkthrough() {
   if (walkthroughTimer) { clearTimeout(walkthroughTimer); walkthroughTimer = null; }
+  document.querySelectorAll("#walkthrough-overlay .attack-flash").forEach(e => e.remove());
   document.getElementById("walkthrough-overlay").classList.remove("visible");
 }
 
@@ -1837,11 +1844,15 @@ function walkthroughPrev() {
 function showWalkthroughFrame() {
   const f = WALKTHROUGH_FRAMES[walkthroughIdx];
   if (!f) return;
+  // Clear any previous attack overlays
+  document.querySelectorAll("#walkthrough-overlay .attack-flash").forEach(e => e.remove());
   // Render hands and boards
   renderWtHand("wt-your-hand", f.yourHand, false);
   renderWtOppHand("wt-opp-hand", f.oppHandCount);
   renderWtBoard("wt-your-board", f.yourBoard, false);
   renderWtBoard("wt-opp-board", f.oppBoard, true);
+  // Attack overlay (if any)
+  if (f.attack) renderWtAttack(f.attack);
   // Status bar — color-code turn indicator like the real game
   const turnEl = document.getElementById("wt-turn-text");
   turnEl.textContent = f.turn;
@@ -1904,6 +1915,31 @@ function renderWtOppHand(id, count) {
   el.innerHTML = "";
   if (!count) { el.innerHTML = '<span style="opacity:0.3;font-size:0.8rem;">empty</span>'; return; }
   for (let i = 0; i < count; i++) el.innerHTML += cardBackHTML();
+}
+
+function renderWtAttack(attack) {
+  // attack: { target: "your-left"|"your-right"|"opp-left"|"opp-right",
+  //           atk: [cards], def: [cards],
+  //           outcome: "destroyed"|"blocked"|"both_destroyed"|"trap" }
+  const [who, side] = attack.target.split("-");
+  const boardEl = document.getElementById(who === "your" ? "wt-your-board" : "wt-opp-board");
+  if (!boardEl) return;
+  const parent = boardEl.parentElement; // .board-row, position:relative
+  const flash = document.createElement("div");
+  flash.className = "attack-flash";
+  attack.atk.forEach(c => flash.innerHTML += smallCardHTML(c));
+  flash.innerHTML += '<div class="vs-label">VS</div>';
+  attack.def.forEach(c => flash.innerHTML += smallCardHTML(c));
+  const outcomeEl = document.createElement("div");
+  outcomeEl.className = "outcome-label";
+  if (attack.outcome === "destroyed") { outcomeEl.className += " outcome-destroyed"; outcomeEl.textContent = "DESTROYED"; }
+  else if (attack.outcome === "blocked") { outcomeEl.className += " outcome-blocked"; outcomeEl.textContent = "BLOCKED"; }
+  else if (attack.outcome === "both_destroyed") { outcomeEl.className += " outcome-both"; outcomeEl.textContent = "MUTUAL DESTRUCTION"; }
+  else if (attack.outcome === "trap") { outcomeEl.className += " outcome-absorbed"; outcomeEl.textContent = "TRAPPED BY ACE"; }
+  flash.appendChild(outcomeEl);
+  if (side === "left") { flash.style.left = "0"; flash.style.top = "50%"; flash.style.transform = "translateY(-50%)"; }
+  else { flash.style.right = "0"; flash.style.top = "50%"; flash.style.transform = "translateY(-50%)"; }
+  parent.appendChild(flash);
 }
 
 function renderWtBoard(id, units, isOpp) {
