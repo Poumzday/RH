@@ -1657,7 +1657,21 @@ const WALKTHROUGH_FRAMES = [
     deckCount: 41, discardCount: 2, duration: 3800,
   },
   {
-    note: "<strong>6 vs 5 → destroys the 5</strong>, 1 power carries forward. Next defender is revealed as a <strong>King</strong>! Knight vs royal = <strong>MUTUAL DESTRUCTION</strong>. The King dies AND your attacker dies.",
+    note: "<strong>6 vs 5 → DESTROYED!</strong> Your 6 destroys the 5, and <strong>1 power carries forward</strong> to the next defender.",
+    turn: "Your turn (P1)", phase: "Action", actions: "Attack continuing…",
+    yourHand: [{rank:"6"},{rank:"4"}],
+    oppHandCount: 2,
+    yourBoard: _yourBoardAfterDeploys,
+    oppBoard: [
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+    ],
+    deckCount: 41, discardCount: 3,
+    attack: {target: "opp-right", atk: [{rank:"6"}], def: [{rank:"5"}], outcome: "destroyed"},
+    duration: 4500,
+  },
+  {
+    note: "Carry-through hits the next defender, revealed as a <strong>King</strong>! Knight vs royal = <strong>MUTUAL DESTRUCTION</strong>. The King dies AND your attacker dies.",
     turn: "Your turn (P1)", phase: "Turn over", actions: "",
     yourHand: [{rank:"6"},{rank:"4"}],
     oppHandCount: 2,
@@ -1665,7 +1679,7 @@ const WALKTHROUGH_FRAMES = [
     oppBoard: [{hidden:true, cardCount:1}],
     deckCount: 41, discardCount: 5,
     attack: {target: "opp-right", atk: [{rank:"6"}], def: [{rank:"K"}], outcome: "both_destroyed"},
-    duration: 5500,
+    duration: 5000,
   },
   {
     note: "<strong>Fast-forward to the end of the game.</strong> Many turns of trading later — the deck is empty (forced-attack phase). Your board has grown to <strong>Ace, Queen, 8, Jack, 10</strong>. You have 3 cards left in hand (5, 8, 9). Opponent has 1 card left in hand and 5 face-down units on their board.",
