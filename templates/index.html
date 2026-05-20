@@ -1400,10 +1400,25 @@ function playExampleDemo(demo) {
         setTimeout(() => atkSlot.classList.add("dying"), 400);
         result.classList.add("show", "win");
       } else if (step.kind === "trap") {
+        // Ace dies, attacker is captured and lands on the defender's board in the Ace's spot
         defSlot.classList.add("dying");
-        atkSlot.style.boxShadow = "0 0 16px 4px rgba(156,39,176,0.7)";
         result.classList.add("show", "trap");
-        setTimeout(() => { atkSlot.style.boxShadow = ""; }, 1500);
+        setTimeout(() => {
+          // Original attacker fades out
+          atkSlot.classList.add("dying");
+          // Replace defender slot content with the attacker's cards, "captured" style
+          const captured = document.createElement("div");
+          captured.className = "demo-attacker-group";
+          ex.atk.forEach(c => captured.innerHTML += cardHTML(c, "sm-card"));
+          defSlot.innerHTML = "";
+          defSlot.appendChild(captured);
+          defSlot.classList.remove("dying");
+          defSlot.style.boxShadow = "0 0 16px 4px rgba(156,39,176,0.7)";
+          defSlot.style.borderRadius = "8px";
+          // Brief pop animation as it "lands"
+          defSlot.style.transform = "scale(1.15)";
+          setTimeout(() => { defSlot.style.transform = "scale(1)"; }, 250);
+        }, 600);
       }
       result.textContent = step.text;
       stepIdx++;
