@@ -1771,7 +1771,28 @@ const WALKTHROUGH_FRAMES = [
     duration: 5500,
   },
   {
-    note: "<strong>Final attack.</strong> Your <strong>8 attacks right</strong>. Reveals a <strong>7</strong> → 8 destroys 7 (1 power carries). Next defender is a <strong>Queen</strong> → <strong>MUTUAL DESTRUCTION</strong>. The Queen and your 8 both die.",
+    note: "<strong>Final attack — your 8 attacks right.</strong> Reveals a <strong>7</strong> → <strong>8 destroys the 7</strong>. 1 power carries forward to the next defender.",
+    turn: "Your turn (P1)", phase: "Forced attack", actions: "",
+    yourHand: [],
+    oppHandCount: 0,
+    yourBoard: [
+      {cards:[{rank:"9"}], rank:"9", is_royal:false, absorbed: true},
+      {cards:[{rank:"Q"}], rank:"Q", is_royal:true},
+      {cards:[{rank:"8"}], rank:"8", is_royal:false},
+      {cards:[{rank:"J"}], rank:"J", is_royal:true},
+      {cards:[{rank:"10"}], rank:"10", is_royal:false},
+    ],
+    oppBoard: [
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+      {hidden:true, cardCount:1},
+    ],
+    deckCount: 0, discardCount: 31,
+    attack: {target: "opp-right", atk: [{rank:"8"}], def: [{rank:"7"}], outcome: "destroyed"},
+    duration: 5000,
+  },
+  {
+    note: "Carry-through hits the next defender — revealed as a <strong>Queen</strong>! Knight vs royal = <strong>MUTUAL DESTRUCTION</strong>. The Queen and your 8 both die. Opponent's right side is wiped out!",
     turn: "Your turn (P1)", phase: "Forced attack", actions: "",
     yourHand: [],
     oppHandCount: 0,
@@ -1788,7 +1809,7 @@ const WALKTHROUGH_FRAMES = [
     ],
     deckCount: 0, discardCount: 33,
     attack: {target: "opp-right", atk: [{rank:"8"}], def: [{rank:"Q"}], outcome: "both_destroyed"},
-    duration: 6000,
+    duration: 5500,
   },
   {
     note: "<strong>Game over!</strong> Both hands empty → boards revealed. <strong>You:</strong> Queen (2) + Jack (1) = <strong>3 points</strong>. <strong>Opponent:</strong> Queen (2) = <strong>2 points</strong>. <strong>You win 3–2!</strong> 🎉",
