@@ -442,6 +442,9 @@ class Game:
             return
         if self.phase not in ("action", "forced_attack"):
             return
+        # Path B is deploy-only — block attacks (forced_attack is unaffected)
+        if self.phase == "action" and self.path == "B":
+            return
         hand = self.hands[sid]
         card_indices = list(set(card_indices))
         if any(i < 0 or i >= len(hand) for i in card_indices):
@@ -578,7 +581,8 @@ class Game:
                 available.append("mulligan")
         elif your_turn and self.phase == "action":
             available.append("deploy")
-            if opp and self.boards[opp]:
+            # Path B is deploy-only — no attacking allowed
+            if opp and self.boards[opp] and self.path != "B":
                 available.append("attack")
             if self.actions_remaining >= 2 and self.discard:
                 available.append("pick_discard")
