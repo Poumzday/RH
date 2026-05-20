@@ -703,7 +703,7 @@ body.on-menu {
 
       <div class="example-demo" data-example="knight-multi-carry">
         <div class="example-title">Example: Carrying through multiple defenders</div>
-        <div class="example-desc">Defender's board: 7, 10, K, Ace. Attacker plays <strong>9 + 9</strong> (combined power 18) on the left. The 18 destroys the 7 (11 carries), then destroys the 10 (1 carries), but is then blocked by the King — knights cannot break a Royal.</div>
+        <div class="example-desc">Defender's board: 7, 10, K, Ace. Attacker plays <strong>9 + 9</strong> (combined power 18) on the left. The 18 destroys the 7 (11 carries), then destroys the 10 (1 carries), then hits the King — <strong>both die in mutual destruction</strong>. (Any knight that hits a royal trades both lives, regardless of how much power is left.) The Ace is untouched.</div>
         <div class="demo-stage"><span class="demo-side-label demo-atk">Attacker</span><span class="demo-side-label demo-def">Defender's board</span></div>
         <div class="demo-controls"><button class="demo-play-btn">▶ Play</button></div>
       </div>
@@ -1216,7 +1216,7 @@ const EXAMPLES = {
     steps: [
       {idx: 0, kind: "destroyed", text: "18 destroys 7 (11 carries)"},
       {idx: 1, kind: "destroyed", text: "11 destroys 10 (1 carries)"},
-      {idx: 2, kind: "blocked",   text: "1 vs King — BLOCKED (knights can't kill royals)"},
+      {idx: 2, kind: "tie",       text: "Hits King — MUTUAL DESTRUCTION (King dies, attacker dies)"},
     ],
   },
   "knight-blocked": {
