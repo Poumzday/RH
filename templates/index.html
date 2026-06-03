@@ -254,6 +254,34 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .sm-card .knight-label { display: none; }
 .sm-card .joker-label { display: none; }
 
+/* --- Mobile: shrink cards & board so they fit small screens --- */
+@media (max-width: 600px) {
+  .card { width: 48px; height: 69px; border-radius: 6px; }
+  .card .rank { font-size: 1.05rem !important; }
+  .card .card-icon { font-size: 1.15rem !important; }
+  .card .royal-icon { font-size: 1.25rem !important; }
+  .card .royal-rank { font-size: 0.5rem !important; }
+  .card .royal-title { display: none; }
+  .card .ace-label { display: none; }
+  .card .knight-label { display: none; }
+  .card .joker-label { display: none; }
+  .card .corner { font-size: 0.38rem !important; }
+
+  .sm-card { width: 38px !important; height: 55px !important; }
+  .sm-card .rank { font-size: 0.85rem !important; }
+  .sm-card .royal-icon { font-size: 1rem !important; }
+
+  .board-row { gap: 3px; padding: 5px; min-height: 84px; }
+  .board-row.board-wide { min-width: 0; width: 100%; left: 0; transform: none; }
+}
+
+@media (max-width: 400px) {
+  .card { width: 40px; height: 58px; }
+  .card .rank { font-size: 0.9rem !important; }
+  .card .royal-icon { font-size: 1.05rem !important; }
+  .sm-card { width: 32px !important; height: 46px !important; }
+}
+
 /* --- Drop zones --- */
 .drop-zone {
   position: absolute; top: 0; bottom: 0; width: 50%; z-index: 40;
