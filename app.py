@@ -3,6 +3,10 @@ import os
 if os.environ.get("RENDER"):
     import eventlet
     eventlet.monkey_patch()
+    # Make psycopg2 cooperate with eventlet so Postgres (Neon) connections
+    # don't break under the monkey-patched SSL/socket stack.
+    from psycogreen.eventlet import patch_psycopg
+    patch_psycopg()
 
 import random
 import uuid
