@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timezone
 
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.pool import NullPool
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
@@ -15,6 +16,10 @@ def init_db(app):
         url = url.replace("postgres://", "postgresql://", 1)
     app.config["SQLALCHEMY_DATABASE_URI"] = url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    # SQLAlchemy's QueuePool uses threading.Condition, which breaks under
+    # eventlet ("cannot notify on un-acquired lock"). NullPool opens a fresh
+    # connection per use — fine for this app's traffic and eventlet-safe.
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"poolclass": NullPool}
     db.init_app(app)
     with app.app_context():
         db.create_all()
