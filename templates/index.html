@@ -12,6 +12,24 @@ body {
   min-height: 100vh; display: flex; flex-direction: column;
   align-items: center; padding: 12px; overflow-x: hidden;
 }
+
+/* --- Gameplay board backgrounds (server-assigned per game, weighted rarity) --- */
+body.bg-classic  { background: radial-gradient(ellipse at top, #1f6b34 0%, #1a5c2a 55%, #0f3d1c 100%); }
+body.bg-midnight { background: radial-gradient(ellipse at top, #16314f 0%, #0d1b2a 60%, #060d16 100%); }
+body.bg-crimson  { background: radial-gradient(ellipse at top, #6d1429 0%, #3d0a17 60%, #1d0509 100%); }
+body.bg-slate    { background: radial-gradient(ellipse at top, #3a4654 0%, #232c36 60%, #11161c 100%); }
+body.bg-royal    { background: radial-gradient(ellipse at top, #4a2c6e 0%, #2a1747 60%, #150a26 100%); }
+body.bg-emerald  { background: radial-gradient(ellipse at top, #0d6b5a 0%, #0a3d38 55%, #04201d 100%); }
+body.bg-aurora {
+  background: linear-gradient(135deg, #1a0a2e 0%, #2d1b69 22%, #11998e 45%, #6a0572 68%, #0f3460 88%, #1a0a2e 100%);
+  background-size: 300% 300%;
+  animation: auroraShift 18s ease infinite;
+}
+@keyframes auroraShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
 h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 
 /* Waiting */
@@ -1188,6 +1206,12 @@ function sfxUnitDeath(unit) {
 socket.on("connect", () => console.log("Connected:", socket.id));
 socket.on("connect_error", (e) => console.error("Socket error:", e));
 
+const BOARD_BG_CLASSES = ["bg-classic","bg-midnight","bg-crimson","bg-slate","bg-royal","bg-emerald","bg-aurora"];
+function applyBoardBg(bg) {
+  document.body.classList.remove(...BOARD_BG_CLASSES);
+  if (bg) document.body.classList.add(bg);
+}
+
 function hideAll() {
   document.getElementById("menu").style.display = "none";
   document.getElementById("room-screen").classList.remove("visible");
@@ -2142,6 +2166,7 @@ function applyState(s) {
   state = s;
   hideAll();
   document.getElementById("game").style.display = "block";
+  applyBoardBg(state.board_bg);
   document.getElementById("ingame-help").style.display = "block";
   document.getElementById("settings-btn").style.display = "block";
   selectedIndices = [];

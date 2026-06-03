@@ -219,9 +219,28 @@ def resolve_attack(attacker_unit, board, side):
     return board, to_discard, steps
 
 
+BOARD_BACKGROUNDS = [
+    # (css_class, weight) — rarer = cooler. Weights sum to 100.
+    ("bg-classic", 25),   # most common, plain felt green
+    ("bg-midnight", 20),
+    ("bg-crimson", 20),
+    ("bg-slate", 15),
+    ("bg-royal", 10),
+    ("bg-emerald", 7),
+    ("bg-aurora", 3),     # rarest, animated shimmer
+]
+
+
+def random_board_bg():
+    classes = [c for c, _ in BOARD_BACKGROUNDS]
+    weights = [w for _, w in BOARD_BACKGROUNDS]
+    return random.choices(classes, weights=weights, k=1)[0]
+
+
 class Game:
     def __init__(self, game_id):
         self.id = game_id
+        self.board_bg = random_board_bg()
         self.deck = make_deck()
         self.discard = []
         self.players = []
@@ -269,6 +288,7 @@ class Game:
             "can_path_b": False,
             "mulligan_waiting": False,
             "spectator_current_turn": 0,
+            "board_bg": self.board_bg,
         }
         if len(self.players) >= 2:
             p1, p2 = self.players[0], self.players[1]
@@ -630,6 +650,7 @@ class Game:
             "available_actions": available,
             "can_path_b": len(self.hands.get(sid, [])) >= 2,
             "mulligan_waiting": self.phase == "mulligan" and sid in self.mulligan_decisions,
+            "board_bg": self.board_bg,
         }
 
         if self.phase == "game_over":
