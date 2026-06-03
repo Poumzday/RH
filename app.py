@@ -19,11 +19,11 @@ KNIGHT_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 BOT_SID = "__bot__"
 
 def random_royals():
-    """Generate 12 royal ranks: each card independently 33% J / 33% Q / 33% K / 1% Emperor."""
+    """Generate 12 royal ranks: each card independently 33% J / 33% Q / 33% K / 0.75% Emperor."""
     ranks = []
     for _ in range(12):
         r = random.random()
-        if r < 0.01:
+        if r < 0.0075:
             ranks.append("E")
         elif r < 0.34:
             ranks.append("J")
