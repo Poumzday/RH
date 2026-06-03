@@ -626,6 +626,40 @@ body.on-menu {
 #settings-panel label { font-size:0.8rem; display:block; margin-bottom:4px; }
 #settings-panel input[type="range"] { width:100%; accent-color:#ffd700; cursor:pointer; }
 .vol-value { font-size:0.75rem; opacity:0.5; text-align:right; display:block; margin-top:2px; }
+
+/* --- Accounts / auth --- */
+#account-area { margin-top:22px; text-align:center; font-size:0.85rem; opacity:0.85; }
+.account-greeting { display:block; color:#ffd700; font-weight:600; margin-bottom:4px; }
+.account-sep { opacity:0.4; margin:0 6px; }
+.btn-link { background:none; border:none; color:#cfe8ff; cursor:pointer; font-size:0.85rem; text-decoration:underline; padding:2px 4px; font-family:inherit; }
+.btn-link:hover { color:#fff; }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:400; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+.modal-overlay.visible { display:flex; }
+.modal-box { background:linear-gradient(160deg, #1f2c3a 0%, #131c26 100%); border:1px solid rgba(255,255,255,0.15); border-radius:14px; padding:26px 24px; width:300px; max-width:90vw; box-shadow:0 10px 40px rgba(0,0,0,0.5); }
+.modal-box h2 { margin-bottom:16px; text-align:center; font-size:1.3rem; letter-spacing:1px; }
+.auth-input { width:100%; padding:10px 12px; margin-bottom:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.3); color:#fff; font-size:0.95rem; }
+.auth-input:focus { outline:none; border-color:#ffd700; }
+.auth-error { color:#ef9a9a; font-size:0.8rem; min-height:18px; margin-bottom:6px; text-align:center; }
+.auth-toggle { text-align:center; margin-top:12px; font-size:0.82rem; opacity:0.8; }
+.auth-cancel { display:block; margin:10px auto 0; opacity:0.6; }
+.stats-summary { display:flex; justify-content:center; gap:18px; margin-top:8px; }
+.stat-pill { text-align:center; background:rgba(0,0,0,0.25); border-radius:10px; padding:8px 16px; min-width:64px; }
+.stat-pill .num { font-size:1.5rem; font-weight:900; }
+.stat-pill .lbl { font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; opacity:0.6; }
+.stats-history { max-height:46vh; overflow-y:auto; text-align:left; }
+.hist-row { background:rgba(0,0,0,0.2); border-radius:8px; padding:8px 12px; margin-bottom:6px; }
+.hist-head { display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; }
+.hist-result { font-weight:800; letter-spacing:1px; }
+.hist-win { color:#81c784; }
+.hist-loss { color:#ef9a9a; }
+.hist-tie { color:#ffd54f; }
+.hist-date { opacity:0.5; font-size:0.7rem; }
+.hist-vs { opacity:0.75; font-size:0.78rem; margin-top:2px; }
+.hist-boards { display:flex; gap:14px; margin-top:8px; flex-wrap:wrap; }
+.hist-board-col { font-size:0.65rem; opacity:0.85; }
+.hist-board-col .hb-label { opacity:0.6; margin-bottom:3px; text-transform:uppercase; letter-spacing:1px; }
+.hist-mini-units { display:flex; gap:3px; flex-wrap:wrap; }
+.hist-empty { opacity:0.5; text-align:center; padding:20px; font-size:0.85rem; }
 </style>
 </head>
 <body>
@@ -643,6 +677,21 @@ body.on-menu {
   <div class="menu-btns">
     <button class="btn btn-primary" onclick="showRoomScreen()">Play Online</button>
     <button class="btn btn-secondary" onclick="showHelp()">How to Play</button>
+  </div>
+  <div id="account-area">
+    <div id="account-logged-out">
+      <button class="btn-link" onclick="openAuth('login')">Log in</button>
+      <span class="account-sep">·</span>
+      <button class="btn-link" onclick="openAuth('signup')">Sign up</button>
+    </div>
+    <div id="account-logged-in" style="display:none;">
+      <span class="account-greeting">♛ <span id="account-name"></span></span>
+      <div>
+        <button class="btn-link" onclick="showStats()">My stats</button>
+        <span class="account-sep">·</span>
+        <button class="btn-link" onclick="doLogout()">Log out</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1002,6 +1051,31 @@ body.on-menu {
   </div>
 </div>
 
+<div id="auth-overlay" class="modal-overlay">
+  <div class="modal-box">
+    <h2 id="auth-title">Log in</h2>
+    <input id="auth-username" class="auth-input" placeholder="Username" autocomplete="username" maxlength="20">
+    <input id="auth-password" type="password" class="auth-input" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')submitAuth()">
+    <div id="auth-error" class="auth-error"></div>
+    <button class="btn btn-primary" style="width:100%;" onclick="submitAuth()"><span id="auth-submit-label">Log in</span></button>
+    <div class="auth-toggle">
+      <span id="auth-toggle-text">No account?</span>
+      <button class="btn-link" id="auth-toggle-btn" onclick="toggleAuthMode()">Sign up</button>
+    </div>
+    <button class="btn-link auth-cancel" onclick="closeAuth()">Cancel</button>
+  </div>
+</div>
+
+<div id="stats-screen" class="room-screen">
+  <div class="room-box" style="max-width:560px;width:92vw;">
+    <h2 style="margin-bottom:4px;">♛ <span id="stats-name"></span></h2>
+    <div id="stats-summary" class="stats-summary"></div>
+    <h3 style="margin:14px 0 6px;opacity:0.7;font-size:0.9rem;letter-spacing:1px;text-transform:uppercase;">Recent games</h3>
+    <div id="stats-history" class="stats-history"></div>
+    <button class="btn btn-secondary btn-sm" style="margin-top:16px;" onclick="backToMenu()">Back</button>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
 <script>
 const S = {hearts:"\u2665", diamonds:"\u2666", clubs:"\u2663", spades:"\u2660"};
@@ -1251,6 +1325,10 @@ function hideAll() {
   document.getElementById("settings-btn").style.display = "none";
   document.getElementById("settings-panel").style.display = "none";
   document.body.classList.remove("on-menu");
+  document.body.classList.remove(...BOARD_BG_CLASSES);
+  const stats = document.getElementById("stats-screen");
+  stats.classList.remove("visible");
+  stats.style.display = "none";
 }
 
 function backToMenu() {
@@ -1259,8 +1337,152 @@ function backToMenu() {
   document.body.classList.add("on-menu");
 }
 
+// --- Accounts ---
+let currentUser = null;
+let authMode = "login";
+
+function updateAccountUI() {
+  const inEl = document.getElementById("account-logged-in");
+  const outEl = document.getElementById("account-logged-out");
+  if (currentUser) {
+    document.getElementById("account-name").textContent = currentUser.display_name;
+    inEl.style.display = "block";
+    outEl.style.display = "none";
+  } else {
+    inEl.style.display = "none";
+    outEl.style.display = "block";
+  }
+}
+
+async function refreshMe() {
+  try {
+    const r = await fetch("/api/me");
+    const d = await r.json();
+    currentUser = d.user;
+  } catch (e) { currentUser = null; }
+  updateAccountUI();
+}
+
+function openAuth(mode) {
+  authMode = mode;
+  document.getElementById("auth-username").value = "";
+  document.getElementById("auth-password").value = "";
+  document.getElementById("auth-error").textContent = "";
+  applyAuthMode();
+  document.getElementById("auth-overlay").classList.add("visible");
+  document.getElementById("auth-username").focus();
+}
+
+function closeAuth() {
+  document.getElementById("auth-overlay").classList.remove("visible");
+}
+
+function toggleAuthMode() {
+  authMode = authMode === "login" ? "signup" : "login";
+  document.getElementById("auth-error").textContent = "";
+  applyAuthMode();
+}
+
+function applyAuthMode() {
+  const login = authMode === "login";
+  document.getElementById("auth-title").textContent = login ? "Log in" : "Sign up";
+  document.getElementById("auth-submit-label").textContent = login ? "Log in" : "Create account";
+  document.getElementById("auth-toggle-text").textContent = login ? "No account?" : "Have an account?";
+  document.getElementById("auth-toggle-btn").textContent = login ? "Sign up" : "Log in";
+  document.getElementById("auth-password").autocomplete = login ? "current-password" : "new-password";
+}
+
+async function submitAuth() {
+  const username = document.getElementById("auth-username").value.trim();
+  const password = document.getElementById("auth-password").value;
+  const errEl = document.getElementById("auth-error");
+  if (!username || !password) { errEl.textContent = "Enter a username and password."; return; }
+  const endpoint = authMode === "login" ? "/api/login" : "/api/signup";
+  try {
+    const r = await fetch(endpoint, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({username, password}),
+    });
+    const d = await r.json();
+    if (!r.ok) { errEl.textContent = d.error || "Something went wrong."; return; }
+    currentUser = d.user;
+    updateAccountUI();
+    closeAuth();
+    // Reconnect so the socket handshake carries the new login cookie.
+    socket.disconnect();
+    socket.connect();
+  } catch (e) { errEl.textContent = "Network error. Try again."; }
+}
+
+async function doLogout() {
+  try { await fetch("/api/logout", {method: "POST"}); } catch (e) {}
+  currentUser = null;
+  updateAccountUI();
+  socket.disconnect();
+  socket.connect();
+}
+
+const RANK_LABEL = {A:"A","2":"2","3":"3","4":"4","5":"5","6":"6","7":"7","8":"8","9":"9","10":"10",J:"J",Q:"Q",K:"K",E:"♛",W:"🃏"};
+
+function renderMiniBoard(units) {
+  if (!units || !units.length) return '<span style="opacity:0.4;">— empty —</span>';
+  return units.map(u => {
+    const isRoyal = u.is_royal;
+    const label = RANK_LABEL[u.rank] || u.rank || "?";
+    const bg = isRoyal ? "#4a2c6e" : "#2c3e50";
+    return `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:30px;border-radius:4px;background:${bg};font-size:0.7rem;font-weight:800;border:1px solid rgba(255,255,255,0.15);">${label}</span>`;
+  }).join("");
+}
+
+async function showStats() {
+  hideAll();
+  const screen = document.getElementById("stats-screen");
+  screen.style.display = "flex";
+  screen.classList.add("visible");
+  document.getElementById("stats-name").textContent = currentUser ? currentUser.display_name : "";
+  document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Loading…</span>';
+  document.getElementById("stats-history").innerHTML = "";
+  try {
+    const r = await fetch("/api/stats");
+    const d = await r.json();
+    if (!r.ok) { document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Could not load stats.</span>'; return; }
+    const s = d.stats;
+    document.getElementById("stats-summary").innerHTML = `
+      <div class="stat-pill"><div class="num">${s.wins}</div><div class="lbl">Wins</div></div>
+      <div class="stat-pill"><div class="num">${s.losses}</div><div class="lbl">Losses</div></div>
+      <div class="stat-pill"><div class="num">${s.ties}</div><div class="lbl">Ties</div></div>
+      <div class="stat-pill"><div class="num">${s.total}</div><div class="lbl">Played</div></div>`;
+    const hist = d.history || [];
+    if (!hist.length) {
+      document.getElementById("stats-history").innerHTML = '<div class="hist-empty">No games yet — play one!</div>';
+      return;
+    }
+    document.getElementById("stats-history").innerHTML = hist.map(g => {
+      const win = g.you_score > g.opp_score, tie = g.you_score === g.opp_score;
+      const cls = win ? "hist-win" : (tie ? "hist-tie" : "hist-loss");
+      const word = win ? "WON" : (tie ? "TIE" : "LOST");
+      const date = new Date(g.finished_at).toLocaleDateString(undefined, {month:"short", day:"numeric"});
+      const opp = g.vs_bot ? "Bot" : g.opp_name;
+      return `<div class="hist-row">
+        <div class="hist-head">
+          <span class="hist-result ${cls}">${word} ${g.you_score}–${g.opp_score}</span>
+          <span class="hist-date">${date}</span>
+        </div>
+        <div class="hist-vs">vs ${opp}</div>
+        <div class="hist-boards">
+          <div class="hist-board-col"><div class="hb-label">You</div><div class="hist-mini-units">${renderMiniBoard(g.you_board)}</div></div>
+          <div class="hist-board-col"><div class="hb-label">${opp}</div><div class="hist-mini-units">${renderMiniBoard(g.opp_board)}</div></div>
+        </div>
+      </div>`;
+    }).join("");
+  } catch (e) {
+    document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Network error.</span>';
+  }
+}
+
 // Show menu styling on load
-document.addEventListener("DOMContentLoaded", () => { document.body.classList.add("on-menu"); });
+document.addEventListener("DOMContentLoaded", () => { document.body.classList.add("on-menu"); refreshMe(); });
 
 function showRoomScreen() {
   hideAll();

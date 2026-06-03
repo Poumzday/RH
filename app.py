@@ -7,13 +7,21 @@ if os.environ.get("RENDER"):
 import random
 import uuid
 import threading
-from flask import Flask, render_template, request
+from datetime import timedelta
+from flask import Flask, render_template, request, session, jsonify
 from flask_socketio import SocketIO, emit, join_room
+
+import models
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
+app.permanent_session_lifetime = timedelta(days=30)
+models.init_db(app)
 async_mode = "eventlet" if os.environ.get("RENDER") else "threading"
 socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins="*")
+
+# sid -> user_id for sockets belonging to a logged-in player (set at connect time)
+sid_to_user = {}
 
 KNIGHT_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 BOT_SID = "__bot__"
@@ -258,6 +266,7 @@ class Game:
         self.turns_taken = {}
         self.has_bot = False
         self.spectators = []
+        self.recorded = False
 
     def add_spectator(self, sid):
         if sid not in self.spectators:
@@ -987,7 +996,39 @@ def generate_room_code():
     return "".join(random.choice(chars) for _ in range(4))
 
 
+def record_finished_game(game):
+    """Persist a finished 2-player game once, attributing it to any logged-in players."""
+    if game.recorded or game.phase != "game_over" or len(game.players) != 2:
+        return
+    game.recorded = True
+    p1, p2 = game.players[0], game.players[1]
+    boards = {
+        "p1": game.board_reveals.get(p1, []),
+        "p2": game.board_reveals.get(p2, []),
+    }
+    with app.app_context():
+        def name_for(sid):
+            if sid == BOT_SID:
+                return "Bot"
+            uid = sid_to_user.get(sid)
+            if uid:
+                u = models.db.session.get(models.User, uid)
+                if u:
+                    return u.display_name
+            return "Guest"
+
+        models.record_game(
+            p1_user_id=sid_to_user.get(p1),
+            p2_user_id=sid_to_user.get(p2),
+            p1_name=name_for(p1), p2_name=name_for(p2),
+            p1_score=game.scores.get(p1, 0), p2_score=game.scores.get(p2, 0),
+            vs_bot=game.has_bot, boards=boards,
+        )
+
+
 def broadcast_state(game):
+    if game.phase == "game_over":
+        record_finished_game(game)
     anim = game.pending_anim
     game.pending_anim = None
     deploy = game.pending_deploy
@@ -1021,6 +1062,60 @@ def broadcast_state(game):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+def _current_user():
+    uid = session.get("user_id")
+    return models.db.session.get(models.User, uid) if uid else None
+
+
+def _user_json(user):
+    return {"username": user.username, "display_name": user.display_name} if user else None
+
+
+@app.route("/api/me")
+def api_me():
+    return jsonify({"user": _user_json(_current_user())})
+
+
+@app.route("/api/signup", methods=["POST"])
+def api_signup():
+    data = request.get_json(force=True, silent=True) or {}
+    user, error = models.create_user(data.get("username", ""), data.get("password", ""))
+    if error:
+        return jsonify({"error": error}), 400
+    session.permanent = True
+    session["user_id"] = user.id
+    return jsonify({"user": _user_json(user)})
+
+
+@app.route("/api/login", methods=["POST"])
+def api_login():
+    data = request.get_json(force=True, silent=True) or {}
+    user = models.authenticate(data.get("username", ""), data.get("password", ""))
+    if not user:
+        return jsonify({"error": "Wrong username or password."}), 401
+    session.permanent = True
+    session["user_id"] = user.id
+    return jsonify({"user": _user_json(user)})
+
+
+@app.route("/api/logout", methods=["POST"])
+def api_logout():
+    session.pop("user_id", None)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/stats")
+def api_stats():
+    user = _current_user()
+    if not user:
+        return jsonify({"error": "Not logged in."}), 401
+    return jsonify({
+        "user": _user_json(user),
+        "stats": models.user_stats(user.id),
+        "history": models.user_history(user.id, limit=10),
+    })
 
 
 @socketio.on("create_room")
@@ -1206,9 +1301,17 @@ def on_discard_excess(data):
     broadcast_state(game)
 
 
+@socketio.on("connect")
+def on_connect():
+    uid = session.get("user_id")
+    if uid:
+        sid_to_user[request.sid] = uid
+
+
 @socketio.on("disconnect")
 def on_disconnect():
     sid = request.sid
+    sid_to_user.pop(sid, None)
     game_id = player_game.pop(sid, None)
     if not game_id or game_id not in games:
         return
