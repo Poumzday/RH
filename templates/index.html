@@ -647,6 +647,9 @@ body.on-menu {
 .auth-error { color:#ef9a9a; font-size:0.8rem; min-height:18px; margin-bottom:6px; text-align:center; }
 .auth-toggle { text-align:center; margin-top:12px; font-size:0.82rem; opacity:0.8; }
 .auth-cancel { display:block; margin:10px auto 0; opacity:0.6; }
+.stats-player-picker { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; font-size:0.82rem; opacity:0.85; }
+.stats-player-picker select { background:rgba(0,0,0,0.3); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:5px 8px; font-size:0.85rem; font-family:inherit; cursor:pointer; max-width:60%; }
+.stats-player-picker select:focus { outline:none; border-color:#ffd700; }
 .stats-summary { display:flex; justify-content:center; gap:18px; margin-top:8px; }
 .stat-pill { text-align:center; background:rgba(0,0,0,0.25); border-radius:10px; padding:8px 16px; min-width:64px; }
 .stat-pill .num { font-size:1.5rem; font-weight:900; }
@@ -1073,6 +1076,10 @@ body.on-menu {
 
 <div id="stats-screen" class="room-screen">
   <div class="room-box" style="max-width:560px;width:92vw;">
+    <div class="stats-player-picker">
+      <label for="stats-player-select">View player:</label>
+      <select id="stats-player-select" onchange="loadStatsFor(this.value)"></select>
+    </div>
     <h2 style="margin-bottom:4px;">♛ <span id="stats-name"></span></h2>
     <div id="stats-summary" class="stats-summary"></div>
     <h3 style="margin:14px 0 6px;opacity:0.7;font-size:0.9rem;letter-spacing:1px;text-transform:uppercase;">Recent games</h3>
@@ -1445,13 +1452,37 @@ async function showStats() {
   const screen = document.getElementById("stats-screen");
   screen.style.display = "flex";
   screen.classList.add("visible");
-  document.getElementById("stats-name").textContent = currentUser ? currentUser.display_name : "";
+  document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Loading…</span>';
+  document.getElementById("stats-history").innerHTML = "";
+  // populate the player dropdown
+  const sel = document.getElementById("stats-player-select");
+  try {
+    const r = await fetch("/api/players");
+    const d = await r.json();
+    const players = d.players || [];
+    sel.innerHTML = players.map(p => `<option value="${p.username}">${p.display_name}</option>`).join("");
+    const start = currentUser ? currentUser.username : (players[0] && players[0].username);
+    if (start) {
+      sel.value = start;
+      loadStatsFor(start);
+    } else {
+      document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">No players yet.</span>';
+    }
+  } catch (e) {
+    document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Network error.</span>';
+  }
+}
+
+async function loadStatsFor(username) {
+  if (!username) return;
   document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Loading…</span>';
   document.getElementById("stats-history").innerHTML = "";
   try {
-    const r = await fetch("/api/stats");
+    const r = await fetch("/api/stats?user=" + encodeURIComponent(username));
     const d = await r.json();
     if (!r.ok) { document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Could not load stats.</span>'; return; }
+    const who = d.user.display_name;
+    document.getElementById("stats-name").textContent = who;
     const s = d.stats;
     document.getElementById("stats-summary").innerHTML = `
       <div class="stat-pill"><div class="num">${s.wins}</div><div class="lbl">Wins</div></div>
@@ -1460,7 +1491,7 @@ async function showStats() {
       <div class="stat-pill"><div class="num">${s.total}</div><div class="lbl">Played</div></div>`;
     const hist = d.history || [];
     if (!hist.length) {
-      document.getElementById("stats-history").innerHTML = '<div class="hist-empty">No games yet — play one!</div>';
+      document.getElementById("stats-history").innerHTML = '<div class="hist-empty">No games yet.</div>';
       return;
     }
     document.getElementById("stats-history").innerHTML = hist.map(g => {
@@ -1476,7 +1507,7 @@ async function showStats() {
         </div>
         <div class="hist-vs">vs ${opp}</div>
         <div class="hist-boards">
-          <div class="hist-board-col"><div class="hb-label">You</div><div class="hist-mini-units">${renderMiniBoard(g.you_board)}</div></div>
+          <div class="hist-board-col"><div class="hb-label">${who}</div><div class="hist-mini-units">${renderMiniBoard(g.you_board)}</div></div>
           <div class="hist-board-col"><div class="hb-label">${opp}</div><div class="hist-mini-units">${renderMiniBoard(g.opp_board)}</div></div>
         </div>
       </div>`;

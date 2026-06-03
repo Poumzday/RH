@@ -1110,11 +1110,24 @@ def api_logout():
     return jsonify({"ok": True})
 
 
+@app.route("/api/players")
+def api_players():
+    players = [{"username": u.username, "display_name": u.display_name}
+               for u in models.User.query.order_by(models.User.display_name).all()]
+    return jsonify({"players": players})
+
+
 @app.route("/api/stats")
 def api_stats():
-    user = _current_user()
-    if not user:
-        return jsonify({"error": "Not logged in."}), 401
+    username = request.args.get("user")
+    if username:
+        user = models.User.query.filter_by(username=username.strip().lower()).first()
+        if not user:
+            return jsonify({"error": "Player not found."}), 404
+    else:
+        user = _current_user()
+        if not user:
+            return jsonify({"error": "Not logged in."}), 401
     return jsonify({
         "user": _user_json(user),
         "stats": models.user_stats(user.id),
