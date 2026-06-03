@@ -271,8 +271,11 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
   .sm-card .rank { font-size: 0.85rem !important; }
   .sm-card .royal-icon { font-size: 1rem !important; }
 
-  .board-row { gap: 3px; padding: 5px; min-height: 84px; }
+  .board-row { gap: 2px; padding: 5px; min-height: 84px; }
   .board-row.board-wide { min-width: 0; width: 100%; left: 0; transform: none; }
+  /* tighten spacing between units (e.g. royals) on the board */
+  .unit-group { margin: 0 1px; }
+  #your-board, #opp-board { gap: 2px !important; }
 }
 
 @media (max-width: 400px) {
@@ -280,6 +283,8 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
   .card .rank { font-size: 0.9rem !important; }
   .card .royal-icon { font-size: 1.05rem !important; }
   .sm-card { width: 32px !important; height: 46px !important; }
+  .unit-group { margin: 0; }
+  #your-board, #opp-board { gap: 1px !important; }
 }
 
 /* --- Drop zones --- */
