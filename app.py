@@ -1068,6 +1068,16 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/_dbcheck")
+def api_dbcheck():
+    import traceback
+    try:
+        n = models.User.query.count()
+        return jsonify({"ok": True, "user_count": n})
+    except Exception:
+        return jsonify({"ok": False, "trace": traceback.format_exc()}), 200
+
+
 def _current_user():
     uid = session.get("user_id")
     return models.db.session.get(models.User, uid) if uid else None
