@@ -333,6 +333,8 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 
 /* Board */
 .unit-group { display: inline-flex; margin: 0 6px; }
+/* a unit that has been revealed to the opponent (Reveal Attacked mode) */
+.unit-exposed .card { outline: 1.5px solid #e53935; outline-offset: -1px; }
 .unit-group .card { margin-left: -30px; }
 .unit-group .card:first-child { margin-left: 0; }
 .unit-group-hidden .card { margin-left: -40px; }
@@ -652,6 +654,10 @@ body.on-menu {
   background:rgba(255,255,255,0.08); color:#cfd8dc; border:1px solid rgba(255,255,255,0.2); border-radius:8px; transition:all 0.15s; }
 .opt-toggle:hover { background:rgba(255,255,255,0.15); }
 .opt-toggle.active { background:rgba(67,160,71,0.35); border-color:#43a047; color:#fff; box-shadow:0 0 8px rgba(67,160,71,0.4); }
+#time-limit-slider { padding:4px 2px; }
+#time-limit-slider input[type="range"] { width:100%; accent-color:#43a047; cursor:pointer; }
+#time-limit-slider .tl-label { font-size:0.75rem; opacity:0.8; margin-top:2px; }
+#turn-timer { font-weight:bold; font-size:0.95rem; }
 .mode-badges { display:flex; gap:6px; }
 .mode-badge { background:rgba(67,160,71,0.3); border:1px solid rgba(67,160,71,0.5); border-radius:10px; padding:2px 8px; font-size:0.7rem; }
 /* collapsible final board in history */
@@ -727,6 +733,11 @@ body.on-menu {
       <div class="game-options">
         <button class="opt-toggle" id="opt-no-scoring" onclick="toggleOpt('no_scoring')">No Scoring</button>
         <button class="opt-toggle" id="opt-reveal-attacked" onclick="toggleOpt('reveal_attacked')">Reveal Attacked</button>
+        <button class="opt-toggle" id="opt-time-limit" onclick="toggleTimeLimit()">Time Limit</button>
+      </div>
+      <div id="time-limit-slider" style="display:none;">
+        <input type="range" id="tl-range" min="15" max="120" step="5" value="30" oninput="setTimeLimit(this.value)">
+        <div class="tl-label"><span id="time-limit-value">30s</span> per turn</div>
       </div>
       <div style="opacity:0.35;font-size:0.7rem;">Options apply to rooms you create</div>
       <div style="opacity:0.4;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;">or enter a room code</div>
@@ -1023,6 +1034,7 @@ body.on-menu {
 <div id="game">
   <div id="status-bar">
     <span class="turn-indicator" id="turn-text"></span>
+    <span id="turn-timer"></span>
     <span class="mode-badges" id="mode-badges"></span>
     <span><span class="badge" id="phase-badge"></span> <span class="badge" id="actions-badge"></span></span>
   </div>
@@ -1566,11 +1578,27 @@ function showRoomScreen() {
   document.getElementById("join-code-input").value = "";
 }
 
-let gameOptions = { no_scoring: false, reveal_attacked: false };
+let gameOptions = { no_scoring: false, reveal_attacked: false, time_limit: 0 };
 function toggleOpt(key) {
   gameOptions[key] = !gameOptions[key];
   const id = key === "no_scoring" ? "opt-no-scoring" : "opt-reveal-attacked";
   document.getElementById(id).classList.toggle("active", gameOptions[key]);
+}
+function toggleTimeLimit() {
+  const on = gameOptions.time_limit === 0;
+  const slider = document.getElementById("time-limit-slider");
+  if (on) {
+    gameOptions.time_limit = parseInt(document.getElementById("tl-range").value);
+    slider.style.display = "block";
+  } else {
+    gameOptions.time_limit = 0;
+    slider.style.display = "none";
+  }
+  document.getElementById("opt-time-limit").classList.toggle("active", on);
+}
+function setTimeLimit(v) {
+  gameOptions.time_limit = parseInt(v);
+  document.getElementById("time-limit-value").textContent = v + "s";
 }
 
 function createRoom() {
@@ -2483,6 +2511,36 @@ function renderWtBoard(id, units, isOpp) {
   });
 }
 
+let turnTimerInterval = null;
+let turnTimerToken = null;
+function updateTurnTimer(s) {
+  const el = document.getElementById("turn-timer");
+  if (!el) return;
+  const active = s.time_limit && !["game_over", "mulligan"].includes(s.phase);
+  if (!active) {
+    el.textContent = "";
+    if (turnTimerInterval) { clearInterval(turnTimerInterval); turnTimerInterval = null; }
+    turnTimerToken = null;
+    return;
+  }
+  // restart the countdown whenever the turn changes
+  if (s.turn_token !== turnTimerToken) {
+    turnTimerToken = s.turn_token;
+    if (turnTimerInterval) clearInterval(turnTimerInterval);
+    let remaining = s.time_limit;
+    const render = () => {
+      el.textContent = "⏱ " + remaining + "s";
+      el.style.color = remaining <= 5 ? "#ef5350" : "";
+    };
+    render();
+    turnTimerInterval = setInterval(() => {
+      remaining = Math.max(0, remaining - 1);
+      render();
+      if (remaining <= 0) { clearInterval(turnTimerInterval); turnTimerInterval = null; }
+    }, 1000);
+  }
+}
+
 let lastPlayerNumber = null;
 function applyState(s) {
   // Detect turn change and add separator
@@ -2504,6 +2562,7 @@ function applyState(s) {
     if (state.reveal_attacked) b += '<span class="mode-badge">Reveal attacked</span>';
     badges.innerHTML = b;
   }
+  updateTurnTimer(state);
   document.getElementById("ingame-help").style.display = "block";
   document.getElementById("settings-btn").style.display = "block";
   selectedIndices = [];
@@ -2665,6 +2724,7 @@ function renderBoard(id, data, isOpp) {
   data.forEach(u => {
     const g = document.createElement("div");
     g.className = isOpp && !u.revealed ? "unit-group unit-group-hidden" : "unit-group";
+    if (u.revealed_by_attack) g.className += " unit-exposed";
     g.style.position = "relative";
     if (isOpp && !u.revealed) { for (let j=0;j<u.card_count;j++) g.innerHTML += cardBackHTML(); }
     else {

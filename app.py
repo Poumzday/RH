@@ -276,6 +276,8 @@ class Game:
         self.recorded = False
         self.no_scoring = False        # game not saved to records
         self.reveal_attacked = False   # attacked units stay face-up for the rest of the game
+        self.time_limit = 0            # seconds per turn (0 = no limit)
+        self.turn_token = 0            # bumped each turn; used to cancel stale turn timers
 
     def add_spectator(self, sid):
         if sid not in self.spectators:
@@ -309,6 +311,8 @@ class Game:
             "board_bg": self.board_bg,
             "no_scoring": self.no_scoring,
             "reveal_attacked": self.reveal_attacked,
+            "time_limit": self.time_limit,
+            "turn_token": self.turn_token,
         }
         if len(self.players) >= 2:
             p1, p2 = self.players[0], self.players[1]
@@ -375,6 +379,7 @@ class Game:
         return self.players.index(sid) + 1
 
     def begin_turn(self):
+        self.turn_token += 1
         sid = self.current_player()
         self.turns_taken[sid] = self.turns_taken.get(sid, 0) + 1
 
@@ -579,6 +584,27 @@ class Game:
         self.deploy_placed_this_action = 0
         self.begin_turn()
 
+    TURN_PHASES = ("action", "deploy", "forced_attack", "turn_over",
+                   "discard_excess", "discard_for_b")
+
+    def auto_pass_turn(self, sid):
+        """Force the current player's turn to end (turn time limit reached)."""
+        if self.phase == "game_over" or sid != self.current_player():
+            return
+        if self.phase not in self.TURN_PHASES:
+            return
+        self.pending_logs.append(f"Player {self.player_number(sid)} ran out of time")
+        if self.phase == "forced_attack":
+            self.discard.extend(self.hands[sid])
+            self.hands[sid] = []
+        # Discard any cards over the hand limit (newest first) before ending.
+        if len(self.hands[sid]) > 10:
+            excess = len(self.hands[sid]) - 10
+            self.discard.extend(self.hands[sid][-excess:])
+            self.hands[sid] = self.hands[sid][:-excess]
+        self.actions_remaining = 0
+        self.end_turn()
+
     def end_game(self):
         self.phase = "game_over"
         self.scores = {}
@@ -650,6 +676,7 @@ class Game:
                         "cards": unit["cards"], "rank": unit["rank"],
                         "is_royal": unit["is_royal"], "power": unit["power"],
                         "revealed": True,
+                        "revealed_by_attack": unit.get("revealed_by_attack", False),
                     })
                 else:
                     opp_board_visible.append({"card_count": len(unit["cards"]), "revealed": False})
@@ -673,6 +700,8 @@ class Game:
             "board_bg": self.board_bg,
             "no_scoring": self.no_scoring,
             "reveal_attacked": self.reveal_attacked,
+            "time_limit": self.time_limit,
+            "turn_token": self.turn_token,
         }
 
         if self.phase == "game_over":
@@ -1041,9 +1070,35 @@ def record_finished_game(game):
         )
 
 
+def schedule_turn_timer(game):
+    """Start a per-turn countdown that force-passes the turn if it isn't ended in time."""
+    if not game.time_limit or game.phase == "game_over" or len(game.players) != 2:
+        return
+    if game.phase not in Game.TURN_PHASES:
+        return
+    cur = game.current_player()
+    if cur == BOT_SID:
+        return
+    token = game.turn_token
+    if getattr(game, "_timer_token", None) == token:
+        return  # a timer is already running for this turn
+    game._timer_token = token
+    limit = game.time_limit
+
+    def _run():
+        socketio.sleep(limit)
+        if game.phase == "game_over" or game.turn_token != token:
+            return  # turn already ended or game over
+        game.auto_pass_turn(game.current_player())
+        broadcast_state(game)
+
+    socketio.start_background_task(_run)
+
+
 def broadcast_state(game):
     if game.phase == "game_over":
         record_finished_game(game)
+    schedule_turn_timer(game)
     anim = game.pending_anim
     game.pending_anim = None
     deploy = game.pending_deploy
@@ -1160,6 +1215,11 @@ def on_create_room(data=None):
     game = Game(game_id)
     game.no_scoring = bool(data.get("no_scoring"))
     game.reveal_attacked = bool(data.get("reveal_attacked"))
+    try:
+        tl = int(data.get("time_limit") or 0)
+    except (TypeError, ValueError):
+        tl = 0
+    game.time_limit = tl if 15 <= tl <= 120 else 0
     game.add_player(sid)
     games[game_id] = game
     rooms[code] = game_id
