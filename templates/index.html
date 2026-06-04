@@ -275,7 +275,11 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
   .board-row { gap: 3px !important; padding: 4px !important; min-height: 72px; }
   .board-row.board-wide { min-width: 0 !important; width: 100% !important; left: 0 !important; transform: none !important; }
   .unit-group { margin: 0 2px !important; }
-  .unit-group .card { margin-left: -20px; }
+  /* doubles/triples: a little less overlap so stacked cards show more */
+  .unit-group .card { margin-left: -15px; }
+  .unit-group .card:first-child { margin-left: 0; }
+  /* and a little more room around multi-card stacks */
+  .unit-group:has(.card + .card) { margin: 0 5px !important; }
   #your-board, #opp-board { gap: 3px !important; }
 }
 
