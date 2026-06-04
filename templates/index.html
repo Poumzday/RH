@@ -486,6 +486,15 @@ body.on-menu {
   background: linear-gradient(180deg, #546e7a 0%, #37474f 100%);
   border-color: rgba(255,255,255,0.2);
 }
+.menu-btns .btn-coming {
+  background: linear-gradient(180deg, #4a4a4a 0%, #2e2e2e 100%);
+  border-color: rgba(255,255,255,0.12); color: rgba(255,255,255,0.45);
+  cursor: not-allowed; box-shadow: none;
+}
+.menu-btns .btn-coming .coming-soon {
+  text-transform: none; letter-spacing: 0.5px; font-size: 0.7rem;
+  color: #ff5252; margin-left: 8px;
+}
 /* Decorative floating cards */
 .menu-deco {
   position: fixed; pointer-events: none; opacity: 0.10; font-size: 6rem;
@@ -712,7 +721,8 @@ body.on-menu {
   <div class="subtitle">A Game of Strategy and Crowns</div>
   <div class="crests">⚔ ♕ ♔ ♕ ⚔</div>
   <div class="menu-btns">
-    <button class="btn btn-primary" onclick="showRoomScreen()">Play Online</button>
+    <button class="btn btn-coming" disabled>Play Online <span class="coming-soon">Coming Soon</span></button>
+    <button class="btn btn-primary" onclick="showRoomScreen()">Play With Friends</button>
     <button class="btn btn-secondary" onclick="showHelp()">How to Play</button>
   </div>
   <div id="account-area">
@@ -734,7 +744,7 @@ body.on-menu {
 
 <div id="room-screen" class="room-screen">
   <div class="room-box">
-    <h2>Play Online</h2>
+    <h2>Play With Friends</h2>
     <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
       <button class="btn btn-primary" style="padding:12px;font-size:1rem;" onclick="createRoom()">Create Room</button>
       <div class="game-options">
