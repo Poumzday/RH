@@ -24,8 +24,15 @@ models.init_db(app)
 async_mode = "eventlet" if os.environ.get("RENDER") else "threading"
 socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins="*")
 
-# sid -> user_id for sockets belonging to a logged-in player (set at connect time)
+# sid -> user_id / display name for sockets belonging to a logged-in player (set at connect)
 sid_to_user = {}
+sid_to_name = {}
+
+
+def display_name_for(sid):
+    if sid == BOT_SID:
+        return "Bot"
+    return sid_to_name.get(sid, "Guest")
 
 KNIGHT_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 BOT_SID = "__bot__"
@@ -332,6 +339,8 @@ class Game:
             state["your_hand_count"] = len(self.hands.get(p1, []))
             state["opponent_hand_count"] = len(self.hands.get(p2, []))
             state["spectator_current_turn"] = self.player_number(self.current_player())
+            state["p1_name"] = display_name_for(p1)
+            state["p2_name"] = display_name_for(p2)
             if self.phase == "game_over":
                 state["scores"] = {
                     "you": self.scores.get(p1, 0),
@@ -702,6 +711,7 @@ class Game:
             "reveal_attacked": self.reveal_attacked,
             "time_limit": self.time_limit,
             "turn_token": self.turn_token,
+            "opponent_name": display_name_for(opp) if opp else None,
         }
 
         if self.phase == "game_over":
@@ -1400,12 +1410,16 @@ def on_connect():
     uid = session.get("user_id")
     if uid:
         sid_to_user[request.sid] = uid
+        u = models.db.session.get(models.User, uid)
+        if u:
+            sid_to_name[request.sid] = u.display_name
 
 
 @socketio.on("disconnect")
 def on_disconnect():
     sid = request.sid
     sid_to_user.pop(sid, None)
+    sid_to_name.pop(sid, None)
     game_id = player_game.pop(sid, None)
     if not game_id or game_id not in games:
         return

@@ -1888,7 +1888,9 @@ socket.on("game_state", (s) => {
   if (wasMulligan && nowAction) {
     let firstPlayerLabel;
     if (s.is_spectator) {
-      firstPlayerLabel = "Player " + s.spectator_current_turn + " goes first!";
+      const fn = s.spectator_current_turn === 1 ? (s.p1_name || "Player 1")
+               : s.spectator_current_turn === 2 ? (s.p2_name || "Player 2") : "Someone";
+      firstPlayerLabel = fn + " goes first!";
     } else {
       firstPlayerLabel = s.your_turn ? "You go first!" : "Opponent goes first!";
     }
@@ -2669,7 +2671,9 @@ function render() {
   const t = document.getElementById("turn-text");
   if (state.phase === "game_over") { t.textContent = "Game Over"; t.style.color = "#fff"; }
   else if (isSpec) {
-    t.textContent = "Spectating — Player " + (state.spectator_current_turn || "?") + "'s turn";
+    const turnName = state.spectator_current_turn === 1 ? (state.p1_name || "Player 1")
+                   : state.spectator_current_turn === 2 ? (state.p2_name || "Player 2") : "?";
+    t.textContent = "Spectating — " + turnName + "'s turn";
     t.style.color = "#ffd54f";
   }
   else { t.textContent = state.your_turn ? "Your Turn" : "Opponent's Turn"; t.style.color = state.your_turn ? "#66bb6a" : "#ef9a9a"; }
@@ -2679,10 +2683,11 @@ function render() {
   // Section labels depend on mode
   const labels = document.querySelectorAll(".section-label");
   if (isSpec) {
-    labels[0].innerHTML = `Player 2's hand (<span id="opp-hand-count">${state.opponent_hand_count}</span>)`;
-    if (labels[1]) labels[1].textContent = "Player 2's board";
-    if (labels[2]) labels[2].textContent = "Player 1's board";
-    if (labels[3]) labels[3].innerHTML = `Player 1's hand (<span id="your-hand-count">${state.your_hand_count||0}</span>)`;
+    const p1 = state.p1_name || "Player 1", p2 = state.p2_name || "Player 2";
+    labels[0].innerHTML = `${p2}'s hand (<span id="opp-hand-count">${state.opponent_hand_count}</span>)`;
+    if (labels[1]) labels[1].textContent = `${p2}'s board`;
+    if (labels[2]) labels[2].textContent = `${p1}'s board`;
+    if (labels[3]) labels[3].innerHTML = `${p1}'s hand (<span id="your-hand-count">${state.your_hand_count||0}</span>)`;
   } else {
     labels[0].innerHTML = `Opponent's hand (<span id="opp-hand-count">0</span>)`;
     if (labels[1]) labels[1].textContent = "Opponent's board";
