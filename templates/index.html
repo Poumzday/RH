@@ -274,12 +274,9 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
   /* tight board so ~7 cards fit per row (!important to beat later base rules) */
   .board-row { gap: 3px !important; padding: 4px !important; min-height: 72px; }
   .board-row.board-wide { min-width: 0 !important; width: 100% !important; left: 0 !important; transform: none !important; }
-  .unit-group { margin: 0 2px !important; }
-  /* doubles/triples: a little less overlap so stacked cards show more */
-  .unit-group .card { margin-left: -15px; }
-  .unit-group .card:first-child { margin-left: 0; }
-  /* and a little more room around multi-card stacks */
-  .unit-group:has(.card + .card) { margin: 0 5px !important; }
+  /* stacked cards (doubles/triples) sit apart like singles instead of overlapping */
+  .unit-group { margin: 0 2px !important; gap: 6px; }
+  .unit-group .card { margin-left: 0 !important; }
   #your-board, #opp-board { gap: 3px !important; }
 }
 
@@ -288,7 +285,7 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
   .card .rank { font-size: 0.85rem !important; }
   .card .royal-icon { font-size: 0.95rem !important; }
   .sm-card { width: 30px !important; height: 43px !important; }
-  .unit-group { margin: 0 1px !important; }
+  .unit-group { margin: 0 1px !important; gap: 4px; }
   #your-board, #opp-board { gap: 2px !important; }
 }
 
