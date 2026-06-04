@@ -667,7 +667,10 @@ body.on-menu {
 .hist-final.open { display:block; }
 .hist-final .hf-side { margin-bottom:16px; }
 .hist-final .hf-label { font-size:0.85rem; font-weight:600; opacity:0.85; margin-bottom:8px; text-align:center; }
-.hist-final .go-units { gap:8px; min-height:0; }
+.hist-final .go-units { gap:4px; min-height:0; justify-content:flex-start; }
+.hist-final .go-unit { padding:3px; }
+.hist-final .go-unit .card { width:56px; height:80px; }
+.hist-final .go-unit .pts-badge { top:-7px; right:-7px; font-size:0.68rem; padding:1px 6px; }
 .hist-final .hf-score { text-align:center; font-weight:bold; font-size:1.05rem; margin-top:8px; }
 .stats-player-picker { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; font-size:0.82rem; opacity:0.85; }
 .stats-player-picker select { background:rgba(0,0,0,0.3); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:5px 8px; font-size:0.85rem; font-family:inherit; cursor:pointer; max-width:60%; }
@@ -1109,7 +1112,7 @@ body.on-menu {
 </div>
 
 <div id="stats-screen" class="room-screen">
-  <div class="room-box" style="max-width:560px;width:92vw;">
+  <div class="room-box" style="max-width:660px;width:94vw;">
     <div class="stats-player-picker">
       <label for="stats-player-select">Your record vs:</label>
       <select id="stats-player-select" onchange="loadHeadToHead(this.value)"></select>
