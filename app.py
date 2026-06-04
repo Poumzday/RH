@@ -1214,6 +1214,18 @@ def api_headtohead():
     })
 
 
+@app.route("/api/overall")
+def api_overall():
+    me = _current_user()
+    if not me:
+        return jsonify({"error": "Not logged in."}), 401
+    return jsonify({
+        "user": _user_json(me),
+        "stats": models.user_stats(me.id),
+        "history": models.user_history(me.id, limit=10),
+    })
+
+
 @socketio.on("create_room")
 def on_create_room(data=None):
     data = data or {}

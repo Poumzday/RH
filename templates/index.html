@@ -675,6 +675,9 @@ body.on-menu {
 .stats-player-picker { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; font-size:0.82rem; opacity:0.85; }
 .stats-player-picker select { background:rgba(0,0,0,0.3); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:5px 8px; font-size:0.85rem; font-family:inherit; cursor:pointer; max-width:60%; }
 .stats-player-picker select:focus { outline:none; border-color:#ffd700; }
+#stats-winrate { text-align:center; margin:6px 0 4px; }
+#stats-winrate .winrate-big { font-size:3.2rem; font-weight:900; line-height:1; }
+#stats-winrate .winrate-label { font-size:0.7rem; text-transform:uppercase; letter-spacing:2px; opacity:0.6; margin-top:2px; }
 .stats-summary { display:flex; justify-content:center; gap:18px; margin-top:8px; }
 .stat-pill { text-align:center; background:rgba(0,0,0,0.25); border-radius:10px; padding:8px 16px; min-width:64px; }
 .stat-pill .num { font-size:1.5rem; font-weight:900; }
@@ -1114,10 +1117,11 @@ body.on-menu {
 <div id="stats-screen" class="room-screen">
   <div class="room-box" style="max-width:660px;width:94vw;">
     <div class="stats-player-picker">
-      <label for="stats-player-select">Your record vs:</label>
-      <select id="stats-player-select" onchange="loadHeadToHead(this.value)"></select>
+      <label for="stats-player-select">View:</label>
+      <select id="stats-player-select" onchange="loadStatsView(this.value)"></select>
     </div>
     <h2 style="margin-bottom:4px;">♛ <span id="stats-name"></span></h2>
+    <div id="stats-winrate"></div>
     <div id="stats-summary" class="stats-summary"></div>
     <h3 style="margin:14px 0 6px;opacity:0.7;font-size:0.9rem;letter-spacing:1px;text-transform:uppercase;">Recent games</h3>
     <div id="stats-history" class="stats-history"></div>
@@ -1478,6 +1482,7 @@ async function showStats() {
   screen.style.display = "flex";
   screen.classList.add("visible");
   document.getElementById("stats-name").textContent = "";
+  document.getElementById("stats-winrate").innerHTML = "";
   document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Loading…</span>';
   document.getElementById("stats-history").innerHTML = "";
   if (!currentUser) {
@@ -1485,18 +1490,89 @@ async function showStats() {
     return;
   }
   const sel = document.getElementById("stats-player-select");
+  let players = [];
   try {
-    const r = await fetch("/api/players");
+    const d = await (await fetch("/api/players")).json();
+    players = d.players || [];
+  } catch (e) {}
+  sel.innerHTML = '<option value="__overall__">Overall</option>' +
+    players.map(p => `<option value="${p.username}">vs ${p.display_name}</option>`).join("");
+  sel.value = "__overall__";
+  loadOverall();
+}
+
+function loadStatsView(value) {
+  if (value === "__overall__" || !value) loadOverall();
+  else loadHeadToHead(value);
+}
+
+// 0% red -> 50% yellow -> 100% green
+function winRateColor(rate) {
+  const red = [229,57,53], yellow = [253,216,53], green = [67,160,71];
+  const lerp = (a, b, t) => a.map((x, i) => Math.round(x + (b[i] - x) * t));
+  const c = rate <= 50 ? lerp(red, yellow, rate / 50) : lerp(yellow, green, (rate - 50) / 50);
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function renderSummary(s) {
+  const wEl = document.getElementById("stats-winrate");
+  if (s.total > 0) {
+    const rate = (s.wins + 0.5 * s.ties) / s.total * 100;
+    wEl.innerHTML = `<div class="winrate-big" style="color:${winRateColor(rate)}">${Math.round(rate)}%</div><div class="winrate-label">Win rate</div>`;
+  } else {
+    wEl.innerHTML = '<div class="winrate-big" style="opacity:0.35">—</div><div class="winrate-label">Win rate</div>';
+  }
+  document.getElementById("stats-summary").innerHTML = `
+    <div class="stat-pill"><div class="num">${s.wins}</div><div class="lbl">Wins</div></div>
+    <div class="stat-pill"><div class="num">${s.ties}</div><div class="lbl">Ties</div></div>
+    <div class="stat-pill"><div class="num">${s.losses}</div><div class="lbl">Losses</div></div>
+    <div class="stat-pill"><div class="num">${s.total}</div><div class="lbl">Played</div></div>`;
+}
+
+function renderHistory(history, fixedOpp) {
+  return history.map(g => {
+    const win = g.you_score > g.opp_score, tie = g.you_score === g.opp_score;
+    const cls = win ? "hist-win" : (tie ? "hist-tie" : "hist-loss");
+    const word = win ? "WON" : (tie ? "TIE" : "LOST");
+    const date = new Date(g.finished_at).toLocaleDateString(undefined, {month:"short", day:"numeric"});
+    const opp = fixedOpp || (g.vs_bot ? "Bot" : g.opp_name);
+    return `<div class="hist-row">
+      <div class="hist-head">
+        <span class="hist-result ${cls}">${word} ${g.you_score}–${g.opp_score}</span>
+        <span class="hist-date">${date}</span>
+      </div>
+      <div class="hist-vs">vs ${opp}</div>
+      <button class="hist-toggle" onclick="toggleFinalBoard(this)">See final board</button>
+      <div class="hist-final">
+        <div class="hf-side">
+          <div class="hf-label">${currentUser.display_name}'s board</div>
+          <div class="go-units">${renderFinalBoard(g.you_board)}</div>
+          <div class="hf-score">Score: ${g.you_score}</div>
+        </div>
+        <div class="hf-side">
+          <div class="hf-label">${opp}'s board</div>
+          <div class="go-units">${renderFinalBoard(g.opp_board)}</div>
+          <div class="hf-score">Score: ${g.opp_score}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function loadOverall() {
+  document.getElementById("stats-winrate").innerHTML = "";
+  document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Loading…</span>';
+  document.getElementById("stats-history").innerHTML = "";
+  try {
+    const r = await fetch("/api/overall");
     const d = await r.json();
-    const players = d.players || [];
-    if (!players.length) {
-      sel.innerHTML = "";
-      document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">No other players yet — invite a friend!</span>';
-      return;
-    }
-    sel.innerHTML = players.map(p => `<option value="${p.username}">${p.display_name}</option>`).join("");
-    sel.value = players[0].username;
-    loadHeadToHead(players[0].username);
+    if (!r.ok) { document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Could not load stats.</span>'; return; }
+    document.getElementById("stats-name").textContent = "Overall";
+    renderSummary(d.stats);
+    const hist = d.history || [];
+    document.getElementById("stats-history").innerHTML = hist.length
+      ? renderHistory(hist, null)
+      : '<div class="hist-empty">No games yet — play one!</div>';
   } catch (e) {
     document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Network error.</span>';
   }
@@ -1520,6 +1596,7 @@ function toggleFinalBoard(btn) {
 
 async function loadHeadToHead(username) {
   if (!username) return;
+  document.getElementById("stats-winrate").innerHTML = "";
   document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Loading…</span>';
   document.getElementById("stats-history").innerHTML = "";
   try {
@@ -1528,42 +1605,11 @@ async function loadHeadToHead(username) {
     if (!r.ok) { document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Could not load stats.</span>'; return; }
     const oppName = d.opponent.display_name;
     document.getElementById("stats-name").textContent = "vs " + oppName;
-    const s = d.stats;
-    document.getElementById("stats-summary").innerHTML = `
-      <div class="stat-pill"><div class="num">${s.wins}</div><div class="lbl">Wins</div></div>
-      <div class="stat-pill"><div class="num">${s.losses}</div><div class="lbl">Losses</div></div>
-      <div class="stat-pill"><div class="num">${s.ties}</div><div class="lbl">Ties</div></div>
-      <div class="stat-pill"><div class="num">${s.total}</div><div class="lbl">Played</div></div>`;
+    renderSummary(d.stats);
     const hist = d.history || [];
-    if (!hist.length) {
-      document.getElementById("stats-history").innerHTML = `<div class="hist-empty">No games against ${oppName} yet.</div>`;
-      return;
-    }
-    document.getElementById("stats-history").innerHTML = hist.map(g => {
-      const win = g.you_score > g.opp_score, tie = g.you_score === g.opp_score;
-      const cls = win ? "hist-win" : (tie ? "hist-tie" : "hist-loss");
-      const word = win ? "WON" : (tie ? "TIE" : "LOST");
-      const date = new Date(g.finished_at).toLocaleDateString(undefined, {month:"short", day:"numeric"});
-      return `<div class="hist-row">
-        <div class="hist-head">
-          <span class="hist-result ${cls}">${word} ${g.you_score}–${g.opp_score}</span>
-          <span class="hist-date">${date}</span>
-        </div>
-        <button class="hist-toggle" onclick="toggleFinalBoard(this)">See final board</button>
-        <div class="hist-final">
-          <div class="hf-side">
-            <div class="hf-label">${currentUser.display_name}'s board</div>
-            <div class="go-units">${renderFinalBoard(g.you_board)}</div>
-            <div class="hf-score">Score: ${g.you_score}</div>
-          </div>
-          <div class="hf-side">
-            <div class="hf-label">${oppName}'s board</div>
-            <div class="go-units">${renderFinalBoard(g.opp_board)}</div>
-            <div class="hf-score">Score: ${g.opp_score}</div>
-          </div>
-        </div>
-      </div>`;
-    }).join("");
+    document.getElementById("stats-history").innerHTML = hist.length
+      ? renderHistory(hist, oppName)
+      : `<div class="hist-empty">No games against ${oppName} yet.</div>`;
   } catch (e) {
     document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Network error.</span>';
   }
