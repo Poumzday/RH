@@ -256,7 +256,7 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 
 /* --- Mobile: shrink cards & board so they fit small screens --- */
 @media (max-width: 600px) {
-  .card { width: 44px; height: 63px; border-radius: 6px; }
+  .card { width: 40px; height: 57px; border-radius: 6px; }
   .card .rank { font-size: 1rem !important; }
   .card .card-icon { font-size: 1.1rem !important; }
   .card .royal-icon { font-size: 1.15rem !important; }
@@ -272,20 +272,20 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
   .sm-card .royal-icon { font-size: 1rem !important; }
 
   /* tight board so ~7 cards fit per row (!important to beat later base rules) */
-  .board-row { gap: 2px !important; padding: 4px !important; min-height: 78px; }
+  .board-row { gap: 3px !important; padding: 4px !important; min-height: 72px; }
   .board-row.board-wide { min-width: 0 !important; width: 100% !important; left: 0 !important; transform: none !important; }
-  .unit-group { margin: 0 1px !important; }
-  .unit-group .card { margin-left: -22px; }
-  #your-board, #opp-board { gap: 2px !important; }
+  .unit-group { margin: 0 2px !important; }
+  .unit-group .card { margin-left: -20px; }
+  #your-board, #opp-board { gap: 3px !important; }
 }
 
 @media (max-width: 400px) {
-  .card { width: 38px; height: 54px; }
-  .card .rank { font-size: 0.88rem !important; }
-  .card .royal-icon { font-size: 1rem !important; }
-  .sm-card { width: 32px !important; height: 46px !important; }
-  .unit-group { margin: 0 !important; }
-  #your-board, #opp-board { gap: 1px !important; }
+  .card { width: 34px; height: 49px; }
+  .card .rank { font-size: 0.85rem !important; }
+  .card .royal-icon { font-size: 0.95rem !important; }
+  .sm-card { width: 30px !important; height: 43px !important; }
+  .unit-group { margin: 0 1px !important; }
+  #your-board, #opp-board { gap: 2px !important; }
 }
 
 /* --- Drop zones --- */
