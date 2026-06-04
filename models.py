@@ -119,6 +119,36 @@ def user_stats(user_id):
     return {"wins": wins, "losses": losses, "ties": ties, "total": total}
 
 
+def head_to_head(user_id, opp_id):
+    """My (user_id) record and games against a specific opponent, from my perspective."""
+    games = GameRecord.query.filter(
+        ((GameRecord.p1_user_id == user_id) & (GameRecord.p2_user_id == opp_id)) |
+        ((GameRecord.p1_user_id == opp_id) & (GameRecord.p2_user_id == user_id))
+    ).order_by(GameRecord.finished_at.desc()).all()
+    wins = losses = ties = 0
+    history = []
+    for r in games:
+        is_p1 = r.p1_user_id == user_id
+        mine = r.p1_score if is_p1 else r.p2_score
+        theirs = r.p2_score if is_p1 else r.p1_score
+        if mine > theirs:
+            wins += 1
+        elif mine < theirs:
+            losses += 1
+        else:
+            ties += 1
+        boards = json.loads(r.boards_json)
+        history.append({
+            "finished_at": r.finished_at.isoformat(),
+            "you_score": mine,
+            "opp_score": theirs,
+            "you_board": boards["p1"] if is_p1 else boards["p2"],
+            "opp_board": boards["p2"] if is_p1 else boards["p1"],
+        })
+    stats = {"wins": wins, "losses": losses, "ties": ties, "total": len(games)}
+    return stats, history
+
+
 def user_history(user_id, limit=10):
     out = []
     for r in _records_for(user_id).limit(limit).all():

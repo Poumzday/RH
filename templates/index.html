@@ -647,6 +647,22 @@ body.on-menu {
 .auth-error { color:#ef9a9a; font-size:0.8rem; min-height:18px; margin-bottom:6px; text-align:center; }
 .auth-toggle { text-align:center; margin-top:12px; font-size:0.82rem; opacity:0.8; }
 .auth-cancel { display:block; margin:10px auto 0; opacity:0.6; }
+.game-options { display:flex; gap:8px; justify-content:center; }
+.opt-toggle { flex:1; padding:8px 6px; font-size:0.78rem; font-weight:600; font-family:inherit; cursor:pointer;
+  background:rgba(255,255,255,0.08); color:#cfd8dc; border:1px solid rgba(255,255,255,0.2); border-radius:8px; transition:all 0.15s; }
+.opt-toggle:hover { background:rgba(255,255,255,0.15); }
+.opt-toggle.active { background:rgba(67,160,71,0.35); border-color:#43a047; color:#fff; box-shadow:0 0 8px rgba(67,160,71,0.4); }
+.mode-badges { display:flex; gap:6px; }
+.mode-badge { background:rgba(67,160,71,0.3); border:1px solid rgba(67,160,71,0.5); border-radius:10px; padding:2px 8px; font-size:0.7rem; }
+/* collapsible final board in history */
+.hist-toggle { background:none; border:1px solid rgba(255,255,255,0.25); color:#cfe8ff; border-radius:6px; padding:3px 10px; font-size:0.72rem; cursor:pointer; margin-top:8px; font-family:inherit; }
+.hist-toggle:hover { background:rgba(255,255,255,0.1); }
+.hist-final { display:none; margin-top:12px; }
+.hist-final.open { display:block; }
+.hist-final .hf-side { margin-bottom:16px; }
+.hist-final .hf-label { font-size:0.85rem; font-weight:600; opacity:0.85; margin-bottom:8px; text-align:center; }
+.hist-final .go-units { gap:8px; min-height:0; }
+.hist-final .hf-score { text-align:center; font-weight:bold; font-size:1.05rem; margin-top:8px; }
 .stats-player-picker { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; font-size:0.82rem; opacity:0.85; }
 .stats-player-picker select { background:rgba(0,0,0,0.3); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:5px 8px; font-size:0.85rem; font-family:inherit; cursor:pointer; max-width:60%; }
 .stats-player-picker select:focus { outline:none; border-color:#ffd700; }
@@ -708,6 +724,11 @@ body.on-menu {
     <h2>Play Online</h2>
     <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
       <button class="btn btn-primary" style="padding:12px;font-size:1rem;" onclick="createRoom()">Create Room</button>
+      <div class="game-options">
+        <button class="opt-toggle" id="opt-no-scoring" onclick="toggleOpt('no_scoring')">No Scoring</button>
+        <button class="opt-toggle" id="opt-reveal-attacked" onclick="toggleOpt('reveal_attacked')">Reveal Attacked</button>
+      </div>
+      <div style="opacity:0.35;font-size:0.7rem;">Options apply to rooms you create</div>
       <div style="opacity:0.4;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;">or enter a room code</div>
       <input class="room-input" id="join-code-input" placeholder="CODE" maxlength="4" onkeydown="if(event.key==='Enter')joinRoom()">
       <div style="display:flex;gap:8px;">
@@ -1002,6 +1023,7 @@ body.on-menu {
 <div id="game">
   <div id="status-bar">
     <span class="turn-indicator" id="turn-text"></span>
+    <span class="mode-badges" id="mode-badges"></span>
     <span><span class="badge" id="phase-badge"></span> <span class="badge" id="actions-badge"></span></span>
   </div>
   <div class="section">
@@ -1077,8 +1099,8 @@ body.on-menu {
 <div id="stats-screen" class="room-screen">
   <div class="room-box" style="max-width:560px;width:92vw;">
     <div class="stats-player-picker">
-      <label for="stats-player-select">View player:</label>
-      <select id="stats-player-select" onchange="loadStatsFor(this.value)"></select>
+      <label for="stats-player-select">Your record vs:</label>
+      <select id="stats-player-select" onchange="loadHeadToHead(this.value)"></select>
     </div>
     <h2 style="margin-bottom:4px;">♛ <span id="stats-name"></span></h2>
     <div id="stats-summary" class="stats-summary"></div>
@@ -1435,54 +1457,62 @@ async function doLogout() {
   socket.connect();
 }
 
-const RANK_LABEL = {A:"A","2":"2","3":"3","4":"4","5":"5","6":"6","7":"7","8":"8","9":"9","10":"10",J:"J",Q:"Q",K:"K",E:"♛",W:"🃏"};
-
-function renderMiniBoard(units) {
-  if (!units || !units.length) return '<span style="opacity:0.4;">— empty —</span>';
-  return units.map(u => {
-    const isRoyal = u.is_royal;
-    const label = RANK_LABEL[u.rank] || u.rank || "?";
-    const bg = isRoyal ? "#4a2c6e" : "#2c3e50";
-    return `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:30px;border-radius:4px;background:${bg};font-size:0.7rem;font-weight:800;border:1px solid rgba(255,255,255,0.15);">${label}</span>`;
-  }).join("");
-}
-
 async function showStats() {
   hideAll();
   const screen = document.getElementById("stats-screen");
   screen.style.display = "flex";
   screen.classList.add("visible");
+  document.getElementById("stats-name").textContent = "";
   document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Loading…</span>';
   document.getElementById("stats-history").innerHTML = "";
-  // populate the player dropdown
+  if (!currentUser) {
+    document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Log in to see your stats.</span>';
+    return;
+  }
   const sel = document.getElementById("stats-player-select");
   try {
     const r = await fetch("/api/players");
     const d = await r.json();
     const players = d.players || [];
-    sel.innerHTML = players.map(p => `<option value="${p.username}">${p.display_name}</option>`).join("");
-    const start = currentUser ? currentUser.username : (players[0] && players[0].username);
-    if (start) {
-      sel.value = start;
-      loadStatsFor(start);
-    } else {
-      document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">No players yet.</span>';
+    if (!players.length) {
+      sel.innerHTML = "";
+      document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">No other players yet — invite a friend!</span>';
+      return;
     }
+    sel.innerHTML = players.map(p => `<option value="${p.username}">${p.display_name}</option>`).join("");
+    sel.value = players[0].username;
+    loadHeadToHead(players[0].username);
   } catch (e) {
     document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Network error.</span>';
   }
 }
 
-async function loadStatsFor(username) {
+function renderFinalBoard(units) {
+  if (!units || !units.length) return '<span style="opacity:0.4;font-size:0.85rem;">— empty board —</span>';
+  return units.map(u => {
+    const cards = (u.cards || []).map(c => cardHTML(c)).join("");
+    const scored = u.points > 0;
+    const badge = scored ? `<div class="pts-badge">+${u.points}</div>` : "";
+    return `<div class="go-unit ${scored ? "scored" : ""}">${cards}${badge}</div>`;
+  }).join("");
+}
+
+function toggleFinalBoard(btn) {
+  const panel = btn.nextElementSibling;
+  const open = panel.classList.toggle("open");
+  btn.textContent = open ? "Hide final board" : "See final board";
+}
+
+async function loadHeadToHead(username) {
   if (!username) return;
   document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Loading…</span>';
   document.getElementById("stats-history").innerHTML = "";
   try {
-    const r = await fetch("/api/stats?user=" + encodeURIComponent(username));
+    const r = await fetch("/api/headtohead?opponent=" + encodeURIComponent(username));
     const d = await r.json();
     if (!r.ok) { document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Could not load stats.</span>'; return; }
-    const who = d.user.display_name;
-    document.getElementById("stats-name").textContent = who;
+    const oppName = d.opponent.display_name;
+    document.getElementById("stats-name").textContent = "vs " + oppName;
     const s = d.stats;
     document.getElementById("stats-summary").innerHTML = `
       <div class="stat-pill"><div class="num">${s.wins}</div><div class="lbl">Wins</div></div>
@@ -1491,7 +1521,7 @@ async function loadStatsFor(username) {
       <div class="stat-pill"><div class="num">${s.total}</div><div class="lbl">Played</div></div>`;
     const hist = d.history || [];
     if (!hist.length) {
-      document.getElementById("stats-history").innerHTML = '<div class="hist-empty">No games yet.</div>';
+      document.getElementById("stats-history").innerHTML = `<div class="hist-empty">No games against ${oppName} yet.</div>`;
       return;
     }
     document.getElementById("stats-history").innerHTML = hist.map(g => {
@@ -1499,16 +1529,23 @@ async function loadStatsFor(username) {
       const cls = win ? "hist-win" : (tie ? "hist-tie" : "hist-loss");
       const word = win ? "WON" : (tie ? "TIE" : "LOST");
       const date = new Date(g.finished_at).toLocaleDateString(undefined, {month:"short", day:"numeric"});
-      const opp = g.vs_bot ? "Bot" : g.opp_name;
       return `<div class="hist-row">
         <div class="hist-head">
           <span class="hist-result ${cls}">${word} ${g.you_score}–${g.opp_score}</span>
           <span class="hist-date">${date}</span>
         </div>
-        <div class="hist-vs">vs ${opp}</div>
-        <div class="hist-boards">
-          <div class="hist-board-col"><div class="hb-label">${who}</div><div class="hist-mini-units">${renderMiniBoard(g.you_board)}</div></div>
-          <div class="hist-board-col"><div class="hb-label">${opp}</div><div class="hist-mini-units">${renderMiniBoard(g.opp_board)}</div></div>
+        <button class="hist-toggle" onclick="toggleFinalBoard(this)">See final board</button>
+        <div class="hist-final">
+          <div class="hf-side">
+            <div class="hf-label">${currentUser.display_name}'s board</div>
+            <div class="go-units">${renderFinalBoard(g.you_board)}</div>
+            <div class="hf-score">Score: ${g.you_score}</div>
+          </div>
+          <div class="hf-side">
+            <div class="hf-label">${oppName}'s board</div>
+            <div class="go-units">${renderFinalBoard(g.opp_board)}</div>
+            <div class="hf-score">Score: ${g.opp_score}</div>
+          </div>
         </div>
       </div>`;
     }).join("");
@@ -1529,8 +1566,15 @@ function showRoomScreen() {
   document.getElementById("join-code-input").value = "";
 }
 
+let gameOptions = { no_scoring: false, reveal_attacked: false };
+function toggleOpt(key) {
+  gameOptions[key] = !gameOptions[key];
+  const id = key === "no_scoring" ? "opt-no-scoring" : "opt-reveal-attacked";
+  document.getElementById(id).classList.toggle("active", gameOptions[key]);
+}
+
 function createRoom() {
-  socket.emit("create_room");
+  socket.emit("create_room", gameOptions);
 }
 
 function joinRoom() {
@@ -2453,6 +2497,13 @@ function applyState(s) {
   hideAll();
   document.getElementById("game").style.display = "block";
   applyBoardBg(state.board_bg);
+  const badges = document.getElementById("mode-badges");
+  if (badges) {
+    let b = "";
+    if (state.no_scoring) b += '<span class="mode-badge">No scoring</span>';
+    if (state.reveal_attacked) b += '<span class="mode-badge">Reveal attacked</span>';
+    badges.innerHTML = b;
+  }
   document.getElementById("ingame-help").style.display = "block";
   document.getElementById("settings-btn").style.display = "block";
   selectedIndices = [];

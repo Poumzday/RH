@@ -129,7 +129,7 @@ def unit_to_dict(unit):
     return d
 
 
-def resolve_attack(attacker_unit, board, side):
+def resolve_attack(attacker_unit, board, side, reveal_attacked=False):
     steps = []
     to_discard = []
 
@@ -203,6 +203,9 @@ def resolve_attack(attacker_unit, board, side):
                 })
             elif remaining < defender["power"]:
                 to_discard.extend(attacker_unit["cards"])
+                # Defender survives the attack — reveal it permanently in this mode.
+                if reveal_attacked:
+                    defender["revealed_by_attack"] = True
                 steps.append({
                     "defender": unit_to_dict(defender),
                     "outcome": "blocked",
@@ -271,6 +274,8 @@ class Game:
         self.has_bot = False
         self.spectators = []
         self.recorded = False
+        self.no_scoring = False        # game not saved to records
+        self.reveal_attacked = False   # attacked units stay face-up for the rest of the game
 
     def add_spectator(self, sid):
         if sid not in self.spectators:
@@ -302,6 +307,8 @@ class Game:
             "mulligan_waiting": False,
             "spectator_current_turn": 0,
             "board_bg": self.board_bg,
+            "no_scoring": self.no_scoring,
+            "reveal_attacked": self.reveal_attacked,
         }
         if len(self.players) >= 2:
             p1, p2 = self.players[0], self.players[1]
@@ -490,7 +497,7 @@ class Game:
             return
         unit = make_unit(cards)
         opp = self.opponent_of(sid)
-        new_board, to_discard, steps = resolve_attack(unit, self.boards[opp], side)
+        new_board, to_discard, steps = resolve_attack(unit, self.boards[opp], side, self.reveal_attacked)
         self.boards[opp] = new_board
         self.discard.extend(to_discard)
         for i in sorted(card_indices, reverse=True):
@@ -638,7 +645,7 @@ class Game:
         opp_board_visible = []
         if opp:
             for unit in self.boards[opp]:
-                if self.phase == "game_over":
+                if self.phase == "game_over" or unit.get("revealed_by_attack"):
                     opp_board_visible.append({
                         "cards": unit["cards"], "rank": unit["rank"],
                         "is_royal": unit["is_royal"], "power": unit["power"],
@@ -664,6 +671,8 @@ class Game:
             "can_path_b": len(self.hands.get(sid, [])) >= 2,
             "mulligan_waiting": self.phase == "mulligan" and sid in self.mulligan_decisions,
             "board_bg": self.board_bg,
+            "no_scoring": self.no_scoring,
+            "reveal_attacked": self.reveal_attacked,
         }
 
         if self.phase == "game_over":
@@ -1005,6 +1014,8 @@ def record_finished_game(game):
     if game.recorded or game.phase != "game_over" or len(game.players) != 2:
         return
     game.recorded = True
+    if game.no_scoring:
+        return
     p1, p2 = game.players[0], game.players[1]
     boards = {
         "p1": game.board_reveals.get(p1, []),
@@ -1112,37 +1123,43 @@ def api_logout():
 
 @app.route("/api/players")
 def api_players():
+    """All other players (potential opponents), excluding the logged-in user."""
+    me = _current_user()
+    q = models.User.query.order_by(models.User.display_name)
     players = [{"username": u.username, "display_name": u.display_name}
-               for u in models.User.query.order_by(models.User.display_name).all()]
+               for u in q.all() if not me or u.id != me.id]
     return jsonify({"players": players})
 
 
-@app.route("/api/stats")
-def api_stats():
-    username = request.args.get("user")
-    if username:
-        user = models.User.query.filter_by(username=username.strip().lower()).first()
-        if not user:
-            return jsonify({"error": "Player not found."}), 404
-    else:
-        user = _current_user()
-        if not user:
-            return jsonify({"error": "Not logged in."}), 401
+@app.route("/api/headtohead")
+def api_headtohead():
+    me = _current_user()
+    if not me:
+        return jsonify({"error": "Not logged in."}), 401
+    opp = models.User.query.filter_by(
+        username=request.args.get("opponent", "").strip().lower()).first()
+    if not opp:
+        return jsonify({"error": "Player not found."}), 404
+    stats, history = models.head_to_head(me.id, opp.id)
     return jsonify({
-        "user": _user_json(user),
-        "stats": models.user_stats(user.id),
-        "history": models.user_history(user.id, limit=10),
+        "me": _user_json(me),
+        "opponent": _user_json(opp),
+        "stats": stats,
+        "history": history,
     })
 
 
 @socketio.on("create_room")
-def on_create_room():
+def on_create_room(data=None):
+    data = data or {}
     sid = request.sid
     code = generate_room_code()
     while code in rooms:
         code = generate_room_code()
     game_id = str(uuid.uuid4())[:8]
     game = Game(game_id)
+    game.no_scoring = bool(data.get("no_scoring"))
+    game.reveal_attacked = bool(data.get("reveal_attacked"))
     game.add_player(sid)
     games[game_id] = game
     rooms[code] = game_id
