@@ -463,7 +463,7 @@ class Game:
             "player": pn,
             "card_count": len(cards),
         }
-        self.pending_logs.append(f"Player {pn} deployed on {side}")
+        self.pending_logs.append(f"{display_name_for(sid)} deployed on {side}")
         for i in sorted(card_indices, reverse=True):
             hand.pop(i)
         if self.phase == "action":
@@ -541,14 +541,14 @@ class Game:
     def pass_action(self, sid):
         if sid != self.current_player() or self.phase != "action":
             return
-        self.pending_logs.append(f"Player {self.player_number(sid)} passed")
+        self.pending_logs.append(f"{display_name_for(sid)} passed")
         self.actions_remaining = 0
         self.check_end_actions()
 
     def pass_and_discard_all(self, sid):
         if sid != self.current_player() or self.phase != "forced_attack":
             return
-        self.pending_logs.append(f"Player {self.player_number(sid)} passed and discarded all")
+        self.pending_logs.append(f"{display_name_for(sid)} passed and discarded all")
         self.discard.extend(self.hands[sid])
         self.hands[sid] = []
         self.phase = "turn_over"
@@ -602,7 +602,7 @@ class Game:
             return
         if self.phase not in self.TURN_PHASES:
             return
-        self.pending_logs.append(f"Player {self.player_number(sid)} ran out of time")
+        self.pending_logs.append(f"{display_name_for(sid)} ran out of time")
         if self.phase == "forced_attack":
             self.discard.extend(self.hands[sid])
             self.hands[sid] = []
