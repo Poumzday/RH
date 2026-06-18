@@ -739,6 +739,10 @@ body.on-menu {
       <div>
         <button class="btn-link" onclick="showStats()">My stats</button>
         <span class="account-sep">·</span>
+        <button class="btn-link" onclick="openUserSettings()">Settings</button>
+        <span class="account-sep">·</span>
+        <button class="btn-link" id="account-admin-link" style="display:none;" onclick="showAdmin()">All players</button>
+        <span class="account-sep" id="account-admin-sep" style="display:none;">·</span>
         <button class="btn-link" onclick="doLogout()">Log out</button>
       </div>
     </div>
@@ -875,7 +879,7 @@ body.on-menu {
         <tr><td>Queen (Q)</td><td>None (Royal)</td><td>2</td></tr>
         <tr><td>King (K)</td><td>None (Royal)</td><td>3</td></tr>
         <tr><td>Emperor (E) <span style="color:#ffd700;">★</span></td><td>None (Royal)</td><td>4 <em>(0.75% rare!)</em></td></tr>
-        <tr><td>Joker</td><td>Wild — see below</td><td>2 (always)</td></tr>
+        <tr><td>Joker</td><td>Wild — see below</td><td>2, or copies a Royal it's paired with</td></tr>
       </table>
     </div>
 
@@ -891,7 +895,7 @@ body.on-menu {
         <li><strong>Path A (default):</strong> Take 1 action.</li>
         <li><strong>Discard 2, Put 2:</strong> Discard 2 cards from your hand, then take 2 actions instead of 1.</li>
       </ul>
-      <p style="margin-top:6px;opacity:0.85;">Choose Path B if you want to deploy multiple units in one turn, or if you want to grab a card from the discard pile (which costs 2 actions). <strong>Path B is deploy-only — you cannot attack on a Path B turn.</strong></p>
+      <p style="margin-top:6px;opacity:0.85;">Choose Path B if you want to deploy multiple units in one turn. <strong>Path B is deploy-only — you cannot attack on a Path B turn.</strong></p>
     </div>
 
     <div class="help-section">
@@ -899,7 +903,6 @@ body.on-menu {
       <ul>
         <li><strong>Deploy:</strong> Place one or more cards from your hand face-down on the left or right side of your board. Multiple cards of the same rank deployed together form a single <strong>unit</strong>. <em>Bonus:</em> if your board has fewer than 3 units, you may keep deploying more units as part of the same action — you only stop spending the action once your board reaches 3 units (or you click "Done Deploying").</li>
         <li><strong>Attack:</strong> Send one or more cards of the same rank from your hand to attack the opponent's board, choosing the left or right side. <strong>Attacking always ends your turn immediately. Not allowed on Path B turns.</strong></li>
-        <li><strong>Pick Up Discard:</strong> Take the top card of the discard pile into your hand. Costs <strong>2 actions</strong>, so it is only available on Path B.</li>
         <li><strong>Pass:</strong> Skip your remaining action and end your turn.</li>
       </ul>
     </div>
@@ -1023,7 +1026,7 @@ body.on-menu {
         <tr><td>Queen</td><td>2</td></tr>
         <tr><td>King</td><td>3</td></tr>
         <tr><td>Emperor <span style="color:#ffd700;">★</span></td><td>4 <em>(rare!)</em></td></tr>
-        <tr><td>Joker</td><td>2 (always)</td></tr>
+        <tr><td>Joker</td><td>2 alone or with a knight; copies a Royal it's paired with (Jack 1, Queen 2, King 3, Emperor 4)</td></tr>
       </table>
       <p style="margin-top:8px;">The player with the most points wins. Ties are possible.</p>
 
@@ -1128,6 +1131,20 @@ body.on-menu {
   </div>
 </div>
 
+<div id="user-settings-overlay" class="modal-overlay">
+  <div class="modal-box">
+    <h2>Settings</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 4px;">
+      <span style="text-align:left;font-size:0.9rem;">Reveal attacked by default
+        <div style="opacity:0.5;font-size:0.72rem;margin-top:2px;">Pre-selects "Reveal Attacked" in rooms you create.</div>
+      </span>
+      <button class="opt-toggle" id="set-reveal-attacked" onclick="toggleUserReveal()">Off</button>
+    </div>
+    <div id="user-settings-error" class="auth-error"></div>
+    <button class="btn-link auth-cancel" onclick="closeUserSettings()">Close</button>
+  </div>
+</div>
+
 <div id="stats-screen" class="room-screen">
   <div class="room-box" style="max-width:660px;width:94vw;">
     <div class="stats-player-picker">
@@ -1139,6 +1156,14 @@ body.on-menu {
     <div id="stats-summary" class="stats-summary"></div>
     <h3 style="margin:14px 0 6px;opacity:0.7;font-size:0.9rem;letter-spacing:1px;text-transform:uppercase;">Recent games</h3>
     <div id="stats-history" class="stats-history"></div>
+    <button class="btn btn-secondary btn-sm" style="margin-top:16px;" onclick="backToMenu()">Back</button>
+  </div>
+</div>
+
+<div id="admin-screen" class="room-screen">
+  <div class="room-box" style="max-width:520px;width:94vw;">
+    <h2 style="margin-bottom:4px;">Games per player</h2>
+    <div id="admin-list" class="stats-history" style="margin-top:10px;"></div>
     <button class="btn btn-secondary btn-sm" style="margin-top:16px;" onclick="backToMenu()">Back</button>
   </div>
 </div>
@@ -1396,6 +1421,9 @@ function hideAll() {
   const stats = document.getElementById("stats-screen");
   stats.classList.remove("visible");
   stats.style.display = "none";
+  const admin = document.getElementById("admin-screen");
+  admin.classList.remove("visible");
+  admin.style.display = "none";
 }
 
 function backToMenu() {
@@ -1415,6 +1443,9 @@ function updateAccountUI() {
     document.getElementById("account-name").textContent = currentUser.display_name;
     inEl.style.display = "block";
     outEl.style.display = "none";
+    const isAdmin = currentUser.username === "poumsday";
+    document.getElementById("account-admin-link").style.display = isAdmin ? "" : "none";
+    document.getElementById("account-admin-sep").style.display = isAdmin ? "" : "none";
   } else {
     inEl.style.display = "none";
     outEl.style.display = "block";
@@ -1490,6 +1521,40 @@ async function doLogout() {
   socket.connect();
 }
 
+function applyRevealToggleUI() {
+  const on = !!(currentUser && currentUser.reveal_attacked_default);
+  const btn = document.getElementById("set-reveal-attacked");
+  btn.classList.toggle("active", on);
+  btn.textContent = on ? "On" : "Off";
+}
+
+function openUserSettings() {
+  if (!currentUser) return;
+  document.getElementById("user-settings-error").textContent = "";
+  applyRevealToggleUI();
+  document.getElementById("user-settings-overlay").classList.add("visible");
+}
+
+function closeUserSettings() {
+  document.getElementById("user-settings-overlay").classList.remove("visible");
+}
+
+async function toggleUserReveal() {
+  if (!currentUser) return;
+  const next = !currentUser.reveal_attacked_default;
+  try {
+    const r = await fetch("/api/settings", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({reveal_attacked_default: next}),
+    });
+    const d = await r.json();
+    if (!r.ok) { document.getElementById("user-settings-error").textContent = d.error || "Could not save."; return; }
+    currentUser = d.user;
+    applyRevealToggleUI();
+  } catch (e) { document.getElementById("user-settings-error").textContent = "Network error. Try again."; }
+}
+
 async function showStats() {
   hideAll();
   const screen = document.getElementById("stats-screen");
@@ -1513,6 +1578,29 @@ async function showStats() {
     players.map(p => `<option value="${p.username}">vs ${p.display_name}</option>`).join("");
   sel.value = "__overall__";
   loadOverall();
+}
+
+async function showAdmin() {
+  hideAll();
+  const screen = document.getElementById("admin-screen");
+  screen.style.display = "flex";
+  screen.classList.add("visible");
+  const list = document.getElementById("admin-list");
+  list.innerHTML = '<div class="hist-empty">Loading…</div>';
+  let players = [];
+  try {
+    const r = await fetch("/api/admin/players");
+    if (!r.ok) { list.innerHTML = '<div class="hist-empty">Not authorized.</div>'; return; }
+    players = (await r.json()).players || [];
+  } catch (e) { list.innerHTML = '<div class="hist-empty">Could not load.</div>'; return; }
+  if (!players.length) { list.innerHTML = '<div class="hist-empty">No players yet.</div>'; return; }
+  list.innerHTML = players.map(p => `
+    <div class="hist-row">
+      <div class="hist-head">
+        <span>${p.display_name}</span>
+        <span class="hist-result">${p.games} game${p.games === 1 ? "" : "s"}</span>
+      </div>
+    </div>`).join("");
 }
 
 function loadStatsView(value) {
@@ -1639,6 +1727,10 @@ function showRoomScreen() {
   el.classList.add("visible");
   document.getElementById("join-error").textContent = "";
   document.getElementById("join-code-input").value = "";
+  // Seed the "Reveal Attacked" option from the logged-in user's saved default.
+  gameOptions.reveal_attacked = !!(currentUser && currentUser.reveal_attacked_default);
+  document.getElementById("opt-reveal-attacked")
+    .classList.toggle("active", gameOptions.reveal_attacked);
 }
 
 let gameOptions = { no_scoring: false, reveal_attacked: false, time_limit: 0 };
@@ -2917,7 +3009,6 @@ function renderActions() {
     const h=document.createElement("div"); h.style.cssText="font-size:0.8rem;opacity:0.5;width:100%;text-align:center;"; h.textContent="Select cards, then drag or click a zone on the board"; el.appendChild(h);
   }
   if (av.includes("finish_deploy")) addBtn(el,"Done Deploying","btn btn-secondary",()=>socket.emit("finish_deploy"));
-  if (av.includes("pick_discard")) addBtn(el,"Pick Up Discard (2 actions)","btn btn-gold",()=>socket.emit("pick_discard"));
   if (av.includes("pass")) addBtn(el,"Pass","btn btn-secondary",()=>socket.emit("pass_action"));
   if (av.includes("pass_discard_all")) addBtn(el,"Pass & Discard All","btn btn-danger",()=>socket.emit("pass_discard_all"));
   if (av.includes("switch_path_b")) addBtn(el,"Discard 2, Put 2","btn btn-sm btn-secondary",()=>socket.emit("switch_to_path_b"), !state.can_path_b);

@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timezone
 
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect, text
 from sqlalchemy.pool import NullPool
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -23,6 +24,19 @@ def init_db(app):
     db.init_app(app)
     with app.app_context():
         db.create_all()
+        _migrate(app)
+
+
+def _migrate(app):
+    """Add columns to existing tables that create_all() leaves untouched."""
+    inspector = inspect(db.engine)
+    user_cols = {c["name"] for c in inspector.get_columns("user")}
+    if "reveal_attacked_default" not in user_cols:
+        with db.engine.begin() as conn:
+            conn.execute(text(
+                'ALTER TABLE "user" ADD COLUMN reveal_attacked_default '
+                'BOOLEAN NOT NULL DEFAULT false'
+            ))
 
 
 class User(db.Model):
@@ -31,6 +45,8 @@ class User(db.Model):
     display_name = db.Column(db.String(32), nullable=False)           # original casing
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    # Per-user default for the "Reveal Attacked" room option. Off by default.
+    reveal_attacked_default = db.Column(db.Boolean, nullable=False, default=False)
 
     def set_password(self, pw):
         self.password_hash = generate_password_hash(pw)
@@ -147,6 +163,28 @@ def head_to_head(user_id, opp_id):
         })
     stats = {"wins": wins, "losses": losses, "ties": ties, "total": len(games)}
     return stats, history
+
+
+def opponents_played(user_id):
+    """User ids of registered opponents this user has at least one recorded game against."""
+    opp_ids = set()
+    for r in _records_for(user_id).all():
+        other = r.p2_user_id if r.p1_user_id == user_id else r.p1_user_id
+        if other and other != user_id:
+            opp_ids.add(other)
+    return opp_ids
+
+
+def all_player_game_counts():
+    """Every registered player with their total recorded games, busiest first."""
+    out = []
+    for u in User.query.order_by(User.display_name).all():
+        total = GameRecord.query.filter(
+            (GameRecord.p1_user_id == u.id) | (GameRecord.p2_user_id == u.id)
+        ).count()
+        out.append({"username": u.username, "display_name": u.display_name, "games": total})
+    out.sort(key=lambda p: (-p["games"], p["display_name"].lower()))
+    return out
 
 
 def user_history(user_id, limit=10):

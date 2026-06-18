@@ -151,6 +151,9 @@ def resolve_attack(attacker_unit, board, side, reveal_attacked=False):
             new_unit = make_unit(attacker_unit["cards"])
             board[0] = new_unit
             new_unit["absorbed"] = new_unit["power"]
+            # The trapped attacker now sits on the board — reveal it in this mode.
+            if reveal_attacked:
+                new_unit["revealed_by_attack"] = True
             steps.append({
                 "defender": unit_to_dict(defender),
                 "outcome": "absorbed",
@@ -191,6 +194,9 @@ def resolve_attack(attacker_unit, board, side, reveal_attacked=False):
                 new_unit = make_unit(attacker_unit["cards"])
                 board[0] = new_unit  # Replace Ace with attacker's cards
                 new_unit["absorbed"] = new_unit["power"]
+                # The trapped attacker now sits on the board — reveal it in this mode.
+                if reveal_attacked:
+                    new_unit["revealed_by_attack"] = True
                 steps.append({
                     "defender": unit_to_dict(defender),
                     "outcome": "absorbed",
@@ -526,18 +532,6 @@ class Game:
         self.actions_remaining = 0
         self.phase = "turn_over"
 
-    def pick_discard(self, sid):
-        if sid != self.current_player() or self.phase != "action":
-            return
-        if self.actions_remaining < 2:
-            return
-        if not self.discard:
-            return
-        card = self.discard.pop()
-        self.hands[sid].append(card)
-        self.actions_remaining = 0
-        self.check_end_actions()
-
     def pass_action(self, sid):
         if sid != self.current_player() or self.phase != "action":
             return
@@ -659,8 +653,6 @@ class Game:
             # Path B is deploy-only — no attacking allowed
             if opp and self.boards[opp] and self.path != "B":
                 available.append("attack")
-            if self.actions_remaining >= 2 and self.discard:
-                available.append("pick_discard")
             available.append("pass")
             if self.path == "A":
                 available.append("switch_path_b")
@@ -1150,12 +1142,27 @@ def _current_user():
 
 
 def _user_json(user):
-    return {"username": user.username, "display_name": user.display_name} if user else None
+    return {
+        "username": user.username,
+        "display_name": user.display_name,
+        "reveal_attacked_default": user.reveal_attacked_default,
+    } if user else None
 
 
 @app.route("/api/me")
 def api_me():
     return jsonify({"user": _user_json(_current_user())})
+
+
+@app.route("/api/settings", methods=["POST"])
+def api_settings():
+    me = _current_user()
+    if not me:
+        return jsonify({"error": "Not logged in."}), 401
+    data = request.get_json(force=True, silent=True) or {}
+    me.reveal_attacked_default = bool(data.get("reveal_attacked_default"))
+    models.db.session.commit()
+    return jsonify({"user": _user_json(me)})
 
 
 @app.route("/api/signup", methods=["POST"])
@@ -1188,12 +1195,26 @@ def api_logout():
 
 @app.route("/api/players")
 def api_players():
-    """All other players (potential opponents), excluding the logged-in user."""
+    """Opponents the logged-in user has played at least one recorded game against."""
     me = _current_user()
-    q = models.User.query.order_by(models.User.display_name)
+    if not me:
+        return jsonify({"players": []})
+    opp_ids = models.opponents_played(me.id)
     players = [{"username": u.username, "display_name": u.display_name}
-               for u in q.all() if not me or u.id != me.id]
+               for u in models.User.query.order_by(models.User.display_name).all()
+               if u.id in opp_ids]
     return jsonify({"players": players})
+
+
+ADMIN_USERNAME = "poumsday"
+
+
+@app.route("/api/admin/players")
+def api_admin_players():
+    me = _current_user()
+    if not me or me.username != ADMIN_USERNAME:
+        return jsonify({"error": "Not authorized."}), 403
+    return jsonify({"players": models.all_player_game_counts()})
 
 
 @app.route("/api/headtohead")
@@ -1364,16 +1385,6 @@ def on_attack(data):
     if not game:
         return
     game.attack(sid, data.get("card_indices", []), data.get("side", "left"))
-    broadcast_state(game)
-
-
-@socketio.on("pick_discard")
-def on_pick_discard():
-    sid = request.sid
-    game = games.get(player_game.get(sid))
-    if not game:
-        return
-    game.pick_discard(sid)
     broadcast_state(game)
 
 
