@@ -335,6 +335,7 @@ class Game:
                     "cards": unit["cards"], "rank": unit["rank"],
                     "is_royal": unit["is_royal"], "power": unit["power"],
                     "revealed": True,
+                    "revealed_by_attack": unit.get("revealed_by_attack", False),
                     "absorbed": unit.get("absorbed"),
                 } for unit in self.boards[pl]]
             state["board"] = board_view(p1)
@@ -640,6 +641,20 @@ class Game:
             self.scores[sid] = total
             self.board_reveals[sid] = reveal
 
+    def _bg_winrate_for(self, sid, opp):
+        """Recipient's head-to-head win rate (0-100) vs opp, or None if unknown.
+        None -> client shows the neutral (yellow) background."""
+        if not opp:
+            return None
+        my_uid = sid_to_user.get(sid)
+        opp_uid = sid_to_user.get(opp)
+        if not my_uid or not opp_uid:
+            return None
+        stats, _ = models.head_to_head(my_uid, opp_uid)
+        if stats["total"] == 0:
+            return None
+        return (stats["wins"] + 0.5 * stats["ties"]) / stats["total"] * 100
+
     def get_state_for(self, sid):
         opp = self.opponent_of(sid) if len(self.players) == 2 else None
         your_turn = len(self.players) == 2 and self.current_player() == sid
@@ -699,6 +714,7 @@ class Game:
             "can_path_b": len(self.hands.get(sid, [])) >= 2,
             "mulligan_waiting": self.phase == "mulligan" and sid in self.mulligan_decisions,
             "board_bg": self.board_bg,
+            "bg_winrate": self._bg_winrate_for(sid, opp),
             "no_scoring": self.no_scoring,
             "reveal_attacked": self.reveal_attacked,
             "time_limit": self.time_limit,
@@ -1146,6 +1162,7 @@ def _user_json(user):
         "username": user.username,
         "display_name": user.display_name,
         "reveal_attacked_default": user.reveal_attacked_default,
+        "time_limit_default": user.time_limit_default,
     } if user else None
 
 
@@ -1160,7 +1177,11 @@ def api_settings():
     if not me:
         return jsonify({"error": "Not logged in."}), 401
     data = request.get_json(force=True, silent=True) or {}
-    me.reveal_attacked_default = bool(data.get("reveal_attacked_default"))
+    if "reveal_attacked_default" in data:
+        me.reveal_attacked_default = bool(data.get("reveal_attacked_default"))
+    if "time_limit_default" in data:
+        tl = int(data.get("time_limit_default") or 0)
+        me.time_limit_default = tl if 15 <= tl <= 120 else 0
     models.db.session.commit()
     return jsonify({"user": _user_json(me)})
 

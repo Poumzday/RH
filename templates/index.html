@@ -1140,6 +1140,16 @@ body.on-menu {
       </span>
       <button class="opt-toggle" id="set-reveal-attacked" onclick="toggleUserReveal()">Off</button>
     </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 4px;">
+      <span style="text-align:left;font-size:0.9rem;">Time limit by default
+        <div style="opacity:0.5;font-size:0.72rem;margin-top:2px;">Pre-sets a per-turn time limit in rooms you create.</div>
+      </span>
+      <button class="opt-toggle" id="set-time-limit" onclick="toggleUserTimeLimit()">Off</button>
+    </div>
+    <div id="set-time-limit-slider" style="display:none;margin:0 0 8px;">
+      <input type="range" id="set-tl-range" min="15" max="120" step="5" value="30" oninput="setUserTimeLimit(this.value)" onchange="commitUserTimeLimit(this.value)">
+      <div class="tl-label"><span id="set-time-limit-value">30s</span> per turn</div>
+    </div>
     <div id="user-settings-error" class="auth-error"></div>
     <button class="btn-link auth-cancel" onclick="closeUserSettings()">Close</button>
   </div>
@@ -1230,6 +1240,12 @@ function playTone(freq, dur, type, vol, detune) {
   o.connect(g);
   o.start(ctx.currentTime);
   o.stop(ctx.currentTime + dur);
+}
+
+// Clock tick for the final seconds of a timed turn
+function sfxTick() {
+  playTone(1200, 0.04, "square", 0.25);
+  playTone(800, 0.05, "sine", 0.15);
 }
 
 function playNoise(dur, vol) {
@@ -1401,9 +1417,17 @@ socket.on("connect", () => console.log("Connected:", socket.id));
 socket.on("connect_error", (e) => console.error("Socket error:", e));
 
 const BOARD_BG_CLASSES = ["bg-classic","bg-midnight","bg-crimson","bg-slate","bg-royal","bg-emerald","bg-aurora"];
-function applyBoardBg(bg) {
+
+// In-game background: a felt gradient tinted by head-to-head win rate vs the
+// current opponent. winrate is 0-100, or null/undefined (guest or no games yet)
+// -> neutral yellow (50%).
+function applyWinrateBg(winrate) {
   document.body.classList.remove(...BOARD_BG_CLASSES);
-  if (bg) document.body.classList.add(bg);
+  const rate = (winrate === null || winrate === undefined) ? 50 : winrate;
+  const base = winRateColorRGB(rate);
+  const shade = (f) => `rgb(${Math.round(base[0]*f)},${Math.round(base[1]*f)},${Math.round(base[2]*f)})`;
+  document.body.style.background =
+    `radial-gradient(ellipse at top, ${shade(0.85)} 0%, ${shade(0.5)} 55%, ${shade(0.28)} 100%)`;
 }
 
 function hideAll() {
@@ -1418,6 +1442,7 @@ function hideAll() {
   document.getElementById("settings-panel").style.display = "none";
   document.body.classList.remove("on-menu");
   document.body.classList.remove(...BOARD_BG_CLASSES);
+  document.body.style.background = "";
   const stats = document.getElementById("stats-screen");
   stats.classList.remove("visible");
   stats.style.display = "none";
@@ -1528,10 +1553,24 @@ function applyRevealToggleUI() {
   btn.textContent = on ? "On" : "Off";
 }
 
+function applyTimeLimitToggleUI() {
+  const tl = (currentUser && currentUser.time_limit_default) || 0;
+  const btn = document.getElementById("set-time-limit");
+  btn.classList.toggle("active", tl > 0);
+  btn.textContent = tl > 0 ? "On" : "Off";
+  const slider = document.getElementById("set-time-limit-slider");
+  slider.style.display = tl > 0 ? "block" : "none";
+  if (tl > 0) {
+    document.getElementById("set-tl-range").value = tl;
+    document.getElementById("set-time-limit-value").textContent = tl + "s";
+  }
+}
+
 function openUserSettings() {
   if (!currentUser) return;
   document.getElementById("user-settings-error").textContent = "";
   applyRevealToggleUI();
+  applyTimeLimitToggleUI();
   document.getElementById("user-settings-overlay").classList.add("visible");
 }
 
@@ -1539,19 +1578,42 @@ function closeUserSettings() {
   document.getElementById("user-settings-overlay").classList.remove("visible");
 }
 
+async function saveUserSettings(payload) {
+  const r = await fetch("/api/settings", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload),
+  });
+  const d = await r.json();
+  if (!r.ok) { document.getElementById("user-settings-error").textContent = d.error || "Could not save."; return false; }
+  currentUser = d.user;
+  return true;
+}
+
 async function toggleUserReveal() {
   if (!currentUser) return;
-  const next = !currentUser.reveal_attacked_default;
   try {
-    const r = await fetch("/api/settings", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({reveal_attacked_default: next}),
-    });
-    const d = await r.json();
-    if (!r.ok) { document.getElementById("user-settings-error").textContent = d.error || "Could not save."; return; }
-    currentUser = d.user;
-    applyRevealToggleUI();
+    if (await saveUserSettings({reveal_attacked_default: !currentUser.reveal_attacked_default})) applyRevealToggleUI();
+  } catch (e) { document.getElementById("user-settings-error").textContent = "Network error. Try again."; }
+}
+
+async function toggleUserTimeLimit() {
+  if (!currentUser) return;
+  const next = (currentUser.time_limit_default || 0) > 0
+    ? 0 : (parseInt(document.getElementById("set-tl-range").value) || 30);
+  try {
+    if (await saveUserSettings({time_limit_default: next})) applyTimeLimitToggleUI();
+  } catch (e) { document.getElementById("user-settings-error").textContent = "Network error. Try again."; }
+}
+
+function setUserTimeLimit(v) {
+  document.getElementById("set-time-limit-value").textContent = v + "s";
+}
+
+async function commitUserTimeLimit(v) {
+  if (!currentUser) return;
+  try {
+    if (await saveUserSettings({time_limit_default: parseInt(v)})) applyTimeLimitToggleUI();
   } catch (e) { document.getElementById("user-settings-error").textContent = "Network error. Try again."; }
 }
 
@@ -1609,10 +1671,13 @@ function loadStatsView(value) {
 }
 
 // 0% red -> 50% yellow -> 100% green
-function winRateColor(rate) {
+function winRateColorRGB(rate) {
   const red = [229,57,53], yellow = [253,216,53], green = [67,160,71];
   const lerp = (a, b, t) => a.map((x, i) => Math.round(x + (b[i] - x) * t));
-  const c = rate <= 50 ? lerp(red, yellow, rate / 50) : lerp(yellow, green, (rate - 50) / 50);
+  return rate <= 50 ? lerp(red, yellow, rate / 50) : lerp(yellow, green, (rate - 50) / 50);
+}
+function winRateColor(rate) {
+  const c = winRateColorRGB(rate);
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
@@ -1731,6 +1796,18 @@ function showRoomScreen() {
   gameOptions.reveal_attacked = !!(currentUser && currentUser.reveal_attacked_default);
   document.getElementById("opt-reveal-attacked")
     .classList.toggle("active", gameOptions.reveal_attacked);
+  // Seed the time-limit option from the logged-in user's saved default.
+  const tlDefault = (currentUser && currentUser.time_limit_default) || 0;
+  gameOptions.time_limit = tlDefault;
+  document.getElementById("opt-time-limit").classList.toggle("active", tlDefault > 0);
+  const tlSlider = document.getElementById("time-limit-slider");
+  if (tlDefault > 0) {
+    tlSlider.style.display = "block";
+    document.getElementById("tl-range").value = tlDefault;
+    document.getElementById("time-limit-value").textContent = tlDefault + "s";
+  } else {
+    tlSlider.style.display = "none";
+  }
 }
 
 let gameOptions = { no_scoring: false, reveal_attacked: false, time_limit: 0 };
@@ -2693,6 +2770,7 @@ function updateTurnTimer(s) {
     turnTimerInterval = setInterval(() => {
       remaining = Math.max(0, remaining - 1);
       render();
+      if (s.your_turn && remaining >= 1 && remaining <= 5) sfxTick();
       if (remaining <= 0) { clearInterval(turnTimerInterval); turnTimerInterval = null; }
     }, 1000);
   }
@@ -2711,7 +2789,7 @@ function applyState(s) {
   state = s;
   hideAll();
   document.getElementById("game").style.display = "block";
-  applyBoardBg(state.board_bg);
+  applyWinrateBg(state.bg_winrate);
   const badges = document.getElementById("mode-badges");
   if (badges) {
     let b = "";

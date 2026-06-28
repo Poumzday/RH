@@ -37,6 +37,12 @@ def _migrate(app):
                 'ALTER TABLE "user" ADD COLUMN reveal_attacked_default '
                 'BOOLEAN NOT NULL DEFAULT false'
             ))
+    if "time_limit_default" not in user_cols:
+        with db.engine.begin() as conn:
+            conn.execute(text(
+                'ALTER TABLE "user" ADD COLUMN time_limit_default '
+                'INTEGER NOT NULL DEFAULT 0'
+            ))
 
 
 class User(db.Model):
@@ -47,6 +53,8 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     # Per-user default for the "Reveal Attacked" room option. Off by default.
     reveal_attacked_default = db.Column(db.Boolean, nullable=False, default=False)
+    # Per-user default for the per-turn time limit (seconds; 0 = no limit).
+    time_limit_default = db.Column(db.Integer, nullable=False, default=0)
 
     def set_password(self, pw):
         self.password_hash = generate_password_hash(pw)
