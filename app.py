@@ -291,6 +291,7 @@ class Game:
         self.reveal_attacked = False   # attacked units stay face-up for the rest of the game
         self.time_limit = 0            # seconds per turn (0 = no limit)
         self.turn_token = 0            # bumped each turn; used to cancel stale turn timers
+        self.bg_winrate = {}           # sid -> head-to-head win rate (0-100) vs opp; cached at game start
 
     def add_spectator(self, sid):
         if sid not in self.spectators:
@@ -367,7 +368,26 @@ class Game:
     def start_game(self):
         for sid in self.players:
             self.hands[sid] = [self.deck.pop() for _ in range(5)]
+        self._compute_bg_winrates()
         self.phase = "mulligan"
+
+    def _compute_bg_winrates(self):
+        """Cache each player's head-to-head win rate (0-100) vs their opponent.
+        Computed once per game so the per-action state broadcasts stay cheap.
+        None -> client shows the neutral (yellow) background."""
+        self.bg_winrate = {}
+        if len(self.players) != 2:
+            return
+        p1, p2 = self.players
+        u1, u2 = sid_to_user.get(p1), sid_to_user.get(p2)
+        if not u1 or not u2:
+            return
+        stats, _ = models.head_to_head(u1, u2)  # from p1's perspective
+        if stats["total"] == 0:
+            return
+        p1_rate = (stats["wins"] + 0.5 * stats["ties"]) / stats["total"] * 100
+        self.bg_winrate[p1] = p1_rate
+        self.bg_winrate[p2] = 100 - p1_rate
 
     def mulligan(self, sid, do_mulligan):
         if self.phase != "mulligan":
@@ -641,20 +661,6 @@ class Game:
             self.scores[sid] = total
             self.board_reveals[sid] = reveal
 
-    def _bg_winrate_for(self, sid, opp):
-        """Recipient's head-to-head win rate (0-100) vs opp, or None if unknown.
-        None -> client shows the neutral (yellow) background."""
-        if not opp:
-            return None
-        my_uid = sid_to_user.get(sid)
-        opp_uid = sid_to_user.get(opp)
-        if not my_uid or not opp_uid:
-            return None
-        stats, _ = models.head_to_head(my_uid, opp_uid)
-        if stats["total"] == 0:
-            return None
-        return (stats["wins"] + 0.5 * stats["ties"]) / stats["total"] * 100
-
     def get_state_for(self, sid):
         opp = self.opponent_of(sid) if len(self.players) == 2 else None
         your_turn = len(self.players) == 2 and self.current_player() == sid
@@ -714,7 +720,7 @@ class Game:
             "can_path_b": len(self.hands.get(sid, [])) >= 2,
             "mulligan_waiting": self.phase == "mulligan" and sid in self.mulligan_decisions,
             "board_bg": self.board_bg,
-            "bg_winrate": self._bg_winrate_for(sid, opp),
+            "bg_winrate": self.bg_winrate.get(sid),
             "no_scoring": self.no_scoring,
             "reveal_attacked": self.reveal_attacked,
             "time_limit": self.time_limit,

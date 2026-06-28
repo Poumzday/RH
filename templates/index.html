@@ -1418,6 +1418,17 @@ socket.on("connect_error", (e) => console.error("Socket error:", e));
 
 const BOARD_BG_CLASSES = ["bg-classic","bg-midnight","bg-crimson","bg-slate","bg-royal","bg-emerald","bg-aurora"];
 
+// Tracks the inline body background we've set, so we only touch the DOM (and
+// trigger a full-page repaint) when it actually changes. Without this, the
+// per-press state render would repaint the whole gradient every frame.
+let appliedBodyBg = "";
+function setBodyBg(value) {
+  if (value === appliedBodyBg) return;
+  document.body.style.background = value;
+  appliedBodyBg = value;
+}
+function clearBodyBg() { setBodyBg(""); }
+
 // In-game background: a felt gradient tinted by head-to-head win rate vs the
 // current opponent. winrate is 0-100, or null/undefined (guest or no games yet)
 // -> neutral yellow (50%).
@@ -1426,8 +1437,7 @@ function applyWinrateBg(winrate) {
   const rate = (winrate === null || winrate === undefined) ? 50 : winrate;
   const base = winRateColorRGB(rate);
   const shade = (f) => `rgb(${Math.round(base[0]*f)},${Math.round(base[1]*f)},${Math.round(base[2]*f)})`;
-  document.body.style.background =
-    `radial-gradient(ellipse at top, ${shade(0.85)} 0%, ${shade(0.5)} 55%, ${shade(0.28)} 100%)`;
+  setBodyBg(`radial-gradient(ellipse at top, ${shade(0.85)} 0%, ${shade(0.5)} 55%, ${shade(0.28)} 100%)`);
 }
 
 function hideAll() {
@@ -1442,7 +1452,6 @@ function hideAll() {
   document.getElementById("settings-panel").style.display = "none";
   document.body.classList.remove("on-menu");
   document.body.classList.remove(...BOARD_BG_CLASSES);
-  document.body.style.background = "";
   const stats = document.getElementById("stats-screen");
   stats.classList.remove("visible");
   stats.style.display = "none";
@@ -1453,6 +1462,7 @@ function hideAll() {
 
 function backToMenu() {
   hideAll();
+  clearBodyBg();
   document.getElementById("menu").style.display = "flex";
   document.body.classList.add("on-menu");
 }
@@ -1619,6 +1629,7 @@ async function commitUserTimeLimit(v) {
 
 async function showStats() {
   hideAll();
+  clearBodyBg();
   const screen = document.getElementById("stats-screen");
   screen.style.display = "flex";
   screen.classList.add("visible");
@@ -1644,6 +1655,7 @@ async function showStats() {
 
 async function showAdmin() {
   hideAll();
+  clearBodyBg();
   const screen = document.getElementById("admin-screen");
   screen.style.display = "flex";
   screen.classList.add("visible");
@@ -1787,6 +1799,7 @@ document.addEventListener("DOMContentLoaded", () => { document.body.classList.ad
 
 function showRoomScreen() {
   hideAll();
+  clearBodyBg();
   const el = document.getElementById("room-screen");
   el.style.display = "flex";
   el.classList.add("visible");
@@ -1853,6 +1866,7 @@ function spectateRoom() {
 
 socket.on("room_created", (data) => {
   hideAll();
+  clearBodyBg();
   const el = document.getElementById("waiting");
   el.style.display = "flex";
   el.classList.add("visible");
