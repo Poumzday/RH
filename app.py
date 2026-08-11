@@ -1266,7 +1266,7 @@ def api_admin_games():
     me = _current_user()
     if not me or me.username != ADMIN_USERNAME:
         return jsonify({"error": "Not authorized."}), 403
-    return jsonify({"games": models.recent_games(5)})
+    return jsonify({"games": models.recent_games(50)})
 
 
 @app.route("/api/headtohead")
