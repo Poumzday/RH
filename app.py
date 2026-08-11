@@ -38,15 +38,15 @@ KNIGHT_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 BOT_SID = "__bot__"
 
 def random_royals():
-    """Generate 12 royal ranks: each card independently 33% J / 33% Q / 33% K / 0.75% Emperor."""
+    """Generate 12 royal ranks: each card independently 33.1% J / 33.1% Q / 33.1% K / 0.7% Emperor."""
     ranks = []
     for _ in range(12):
         r = random.random()
-        if r < 0.0075:
+        if r < 0.007:
             ranks.append("E")
-        elif r < 0.34:
+        elif r < 0.338:
             ranks.append("J")
-        elif r < 0.67:
+        elif r < 0.669:
             ranks.append("Q")
         else:
             ranks.append("K")
@@ -82,7 +82,7 @@ def make_deck():
     for r in KNIGHT_RANKS:
         for _ in range(4):
             deck.append({"rank": r, "suit": "none"})
-    # Royals: 12 cards, each independently rolled (33% J/Q/K, 1% Emperor)
+    # Royals: 12 cards, each independently rolled (33.1% J/Q/K, 0.7% Emperor)
     royal_ranks = random_royals()
     styles = list(ROYAL_STYLES)
     random.shuffle(styles)
@@ -281,6 +281,7 @@ class Game:
         self.deploy_placed_this_action = 0
         self.pending_anim = None
         self.pending_deploy = None
+        self.pending_discard_anim = None
         self.pending_logs = []
         self.mulligan_decisions = {}
         self.turns_taken = {}
@@ -447,6 +448,12 @@ class Game:
         self.path = "B"
         self.phase = "discard_for_b"
 
+    def cancel_path_b(self, sid):
+        if sid != self.current_player() or self.phase != "discard_for_b":
+            return
+        self.path = "A"
+        self.phase = "action"
+
     def discard_cards(self, sid, indices):
         if sid != self.current_player() or self.phase != "discard_for_b":
             return
@@ -457,9 +464,12 @@ class Game:
             return
         if any(i < 0 or i >= len(self.hands[sid]) for i in indices):
             return
+        discarded = []
         for i in indices:
             card = self.hands[sid].pop(i)
             self.discard.append(card)
+            discarded.append(card)
+        self.pending_discard_anim = discarded
         self.actions_remaining = 2
         self.phase = "action"
 
@@ -685,6 +695,7 @@ class Game:
             available.append("pass_discard_all")
         elif your_turn and self.phase == "discard_for_b":
             available.append("discard")
+            available.append("cancel_path_b")
         elif your_turn and self.phase == "turn_over":
             available.append("end_turn")
         elif your_turn and self.phase == "discard_excess":
@@ -1127,6 +1138,8 @@ def broadcast_state(game):
     game.pending_anim = None
     deploy = game.pending_deploy
     game.pending_deploy = None
+    discard_anim = game.pending_discard_anim
+    game.pending_discard_anim = None
     logs = game.pending_logs
     game.pending_logs = []
     for sid in game.players:
@@ -1137,6 +1150,8 @@ def broadcast_state(game):
             st["attack_anim"] = anim
         if deploy:
             st["deploy_anim"] = deploy
+        if discard_anim:
+            st["discard_anim"] = discard_anim
         if logs:
             st["event_logs"] = logs
         socketio.emit("game_state", st, to=sid)
@@ -1146,6 +1161,8 @@ def broadcast_state(game):
             st["attack_anim"] = anim
         if deploy:
             st["deploy_anim"] = deploy
+        if discard_anim:
+            st["discard_anim"] = discard_anim
         if logs:
             st["event_logs"] = logs
         socketio.emit("game_state", st, to=sid)
@@ -1242,6 +1259,14 @@ def api_admin_players():
     if not me or me.username != ADMIN_USERNAME:
         return jsonify({"error": "Not authorized."}), 403
     return jsonify({"players": models.all_player_game_counts()})
+
+
+@app.route("/api/admin/games")
+def api_admin_games():
+    me = _current_user()
+    if not me or me.username != ADMIN_USERNAME:
+        return jsonify({"error": "Not authorized."}), 403
+    return jsonify({"games": models.recent_games(5)})
 
 
 @app.route("/api/headtohead")
@@ -1372,6 +1397,16 @@ def on_switch_path_b():
     if not game:
         return
     game.switch_to_path_b(sid)
+    broadcast_state(game)
+
+
+@socketio.on("cancel_path_b")
+def on_cancel_path_b():
+    sid = request.sid
+    game = games.get(player_game.get(sid))
+    if not game:
+        return
+    game.cancel_path_b(sid)
     broadcast_state(game)
 
 

@@ -213,7 +213,7 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .card-royal.rs-violet .royal-icon, .card-royal.rs-violet .corner { color: #f3c0ff; }
 .card-royal.rs-violet .royal-rank { color: #ea80fc; }
 
-/* Emperor — ultra rare (0.75% chance). Soft rainbow shimmer */
+/* Emperor — ultra rare (0.7% chance). Soft rainbow shimmer */
 .card-royal.rs-imperial {
   background: linear-gradient(135deg, #ffe0ec 0%, #ffe9c7 18%, #fff7c2 34%, #d4f7c7 50%, #c5ecff 66%, #e0d4ff 82%, #ffd4f0 100%);
   border-color: #ffffff;
@@ -334,6 +334,8 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 .hand-card:hover { transform: translateY(-6px); }
 .hand-card.selected { transform: translateY(-10px); box-shadow: 0 0 0 3px #ffeb3b, 0 4px 12px rgba(0,0,0,0.4); }
 .hand-card.dimmed { opacity: 0.4; pointer-events: none; }
+.hand-card.over-limit { filter: hue-rotate(300deg) saturate(1.5); box-shadow: 0 0 0 2px rgba(255,82,82,0.85), 0 4px 12px rgba(0,0,0,0.4); }
+.hand-card.over-limit.selected { box-shadow: 0 0 0 3px #ffeb3b, 0 0 0 2px rgba(255,82,82,0.85), 0 4px 12px rgba(0,0,0,0.4); }
 
 /* Board */
 .unit-group { display: inline-flex; margin: 0 6px; }
@@ -868,7 +870,7 @@ body.on-menu {
       <h3>The Deck (54 cards)</h3>
       <ul>
         <li><strong>40 Knights</strong> — four copies each of A, 2, 3, 4, 5, 6, 7, 8, 9, 10. No suits.</li>
-        <li><strong>12 Royals</strong> — 12 cards, each independently rolled: 33% Jack, 33% Queen, 33% King, and a <strong>0.75% chance of an Emperor</strong> (ultra-rare, worth 4 points!). Every game has a different mix.</li>
+        <li><strong>12 Royals</strong> — 12 cards, each independently rolled: 33.1% Jack, 33.1% Queen, 33.1% King, and a <strong>0.7% chance of an Emperor</strong> (ultra-rare, worth 4 points!). Every game has a different mix.</li>
         <li><strong>2 Jokers</strong> — wild cards.</li>
       </ul>
       <table class="help-table" style="margin-top:8px;">
@@ -878,7 +880,7 @@ body.on-menu {
         <tr><td>Jack (J)</td><td>None (Royal)</td><td>1</td></tr>
         <tr><td>Queen (Q)</td><td>None (Royal)</td><td>2</td></tr>
         <tr><td>King (K)</td><td>None (Royal)</td><td>3</td></tr>
-        <tr><td>Emperor (E) <span style="color:#ffd700;">★</span></td><td>None (Royal)</td><td>4 <em>(0.75% rare!)</em></td></tr>
+        <tr><td>Emperor (E) <span style="color:#ffd700;">★</span></td><td>None (Royal)</td><td>4 <em>(0.7% rare!)</em></td></tr>
         <tr><td>Joker</td><td>Wild — see below</td><td>2, or copies a Royal it's paired with</td></tr>
       </table>
     </div>
@@ -1172,8 +1174,13 @@ body.on-menu {
 
 <div id="admin-screen" class="room-screen">
   <div class="room-box" style="max-width:520px;width:94vw;">
-    <h2 style="margin-bottom:4px;">Games per player</h2>
+    <h2 style="margin-bottom:4px;">Admin</h2>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="opt-toggle active" id="admin-tab-players" onclick="showAdminTab('players')">Players</button>
+      <button class="opt-toggle" id="admin-tab-games" onclick="showAdminTab('games')">Recent Games</button>
+    </div>
     <div id="admin-list" class="stats-history" style="margin-top:10px;"></div>
+    <div id="admin-games-list" class="stats-history" style="margin-top:10px;display:none;"></div>
     <button class="btn btn-secondary btn-sm" style="margin-top:16px;" onclick="backToMenu()">Back</button>
   </div>
 </div>
@@ -1653,12 +1660,23 @@ async function showStats() {
   loadOverall();
 }
 
+let adminGamesLoaded = false;
+
 async function showAdmin() {
   hideAll();
   clearBodyBg();
   const screen = document.getElementById("admin-screen");
   screen.style.display = "flex";
   screen.classList.add("visible");
+  adminGamesLoaded = false;
+  document.getElementById("admin-tab-players").classList.add("active");
+  document.getElementById("admin-tab-games").classList.remove("active");
+  document.getElementById("admin-list").style.display = "";
+  document.getElementById("admin-games-list").style.display = "none";
+  await loadAdminPlayers();
+}
+
+async function loadAdminPlayers() {
   const list = document.getElementById("admin-list");
   list.innerHTML = '<div class="hist-empty">Loading…</div>';
   let players = [];
@@ -1675,6 +1693,42 @@ async function showAdmin() {
         <span class="hist-result">${p.games} game${p.games === 1 ? "" : "s"}</span>
       </div>
     </div>`).join("");
+}
+
+async function showAdminTab(tab) {
+  document.getElementById("admin-tab-players").classList.toggle("active", tab === "players");
+  document.getElementById("admin-tab-games").classList.toggle("active", tab === "games");
+  document.getElementById("admin-list").style.display = tab === "players" ? "" : "none";
+  document.getElementById("admin-games-list").style.display = tab === "games" ? "" : "none";
+  if (tab === "games" && !adminGamesLoaded) {
+    adminGamesLoaded = true;
+    await loadAdminGames();
+  }
+}
+
+async function loadAdminGames() {
+  const list = document.getElementById("admin-games-list");
+  list.innerHTML = '<div class="hist-empty">Loading…</div>';
+  let games = [];
+  try {
+    const r = await fetch("/api/admin/games");
+    if (!r.ok) { list.innerHTML = '<div class="hist-empty">Not authorized.</div>'; return; }
+    games = (await r.json()).games || [];
+  } catch (e) { list.innerHTML = '<div class="hist-empty">Could not load.</div>'; return; }
+  if (!games.length) { list.innerHTML = '<div class="hist-empty">No games yet.</div>'; return; }
+  list.innerHTML = games.map(g => {
+    const p2 = g.vs_bot ? "Bot" : g.p2_name;
+    const winner = g.winner === 1 ? g.p1_name : (g.winner === 2 ? p2 : null);
+    const cls = g.winner === 1 ? "hist-win" : (g.winner === 2 ? "hist-loss" : "hist-tie");
+    const date = new Date(g.finished_at).toLocaleDateString(undefined, {month:"short", day:"numeric"});
+    return `<div class="hist-row">
+      <div class="hist-head">
+        <span>${g.p1_name} <strong>${g.p1_score}</strong> – <strong>${g.p2_score}</strong> ${p2}</span>
+        <span class="hist-date">${date}</span>
+      </div>
+      <div class="hist-vs ${cls}">${winner ? winner + " won" : "Tie"}</div>
+    </div>`;
+  }).join("");
 }
 
 function loadStatsView(value) {
@@ -2150,7 +2204,22 @@ socket.on("game_state", (s) => {
   if (s.deploy_anim) playDeployFlash(s.deploy_anim);
   if (s.event_logs) s.event_logs.forEach(m => addLog(m));
   applyState(s);
+  if (s.discard_anim) playDiscardAnimation(s.discard_anim);
 });
+
+function playDiscardAnimation(pair) {
+  const dc = document.getElementById("discard-card");
+  const countEl = document.getElementById("discard-count");
+  if (!dc || !countEl || !pair || pair.length < 2) return;
+  const finalHTML = dc.innerHTML;
+  const finalCount = countEl.textContent;
+  dc.innerHTML = cardHTML(pair[0]);
+  countEl.textContent = String(Math.max(0, parseInt(finalCount, 10) - 1));
+  setTimeout(() => {
+    dc.innerHTML = finalHTML;
+    countEl.textContent = finalCount;
+  }, 1000);
+}
 
 function playCoinFlip(resultText, landBack) {
   const ov = document.getElementById("coinflip-overlay");
@@ -2997,13 +3066,14 @@ function renderHand() {
     return;
   }
   const canSel = state.your_turn && ["action","deploy","forced_attack","discard_for_b","discard_excess"].includes(state.phase);
+  const overLimit = hand.length > 10;
   hand.forEach((card,i) => {
     const sel = selectedIndices.includes(i);
     let dim = false;
     // Only dim for discard_for_b (must pick exactly 2)
     if (state.phase==="discard_for_b" && selectedIndices.length>=2 && !sel) dim = true;
     const wrapper = document.createElement("div");
-    wrapper.innerHTML = cardHTML(card, `hand-card${sel?" selected":""}${dim?" dimmed":""}`);
+    wrapper.innerHTML = cardHTML(card, `hand-card${sel?" selected":""}${dim?" dimmed":""}${overLimit?" over-limit":""}`);
     const div = wrapper.firstElementChild;
     if (canSel && !dim) {
       div.onclick = () => { const x=selectedIndices.indexOf(i); x>=0?selectedIndices.splice(x,1):selectedIndices.push(i); renderHand(); renderActions(); };
@@ -3072,6 +3142,9 @@ function renderActions() {
   if (av.includes("discard")) {
     el.innerHTML=`<div class="action-label">Select 2 cards to discard (${selectedIndices.length}/2)</div>`;
     addBtn(el,"Discard Selected","btn btn-danger",()=>socket.emit("discard_cards",{indices:selectedIndices}),selectedIndices.length!==2);
+    if (av.includes("cancel_path_b")) {
+      addBtn(el,"Undo","btn btn-secondary",()=>socket.emit("cancel_path_b"));
+    }
     return;
   }
 
@@ -3317,7 +3390,7 @@ function playAttackAnimation(anim) {
 
 // --- Endgame animation ---
 async function playEndgameAnimation() {
-  await sleep(600);
+  await sleep(300);
   const ov = document.getElementById("gameover-overlay");
   const yourBoard = document.getElementById("go-your-board");
   const oppBoard = document.getElementById("go-opp-board");
@@ -3335,39 +3408,39 @@ async function playEndgameAnimation() {
   document.getElementById("go-opp-score").textContent = "";
   ov.classList.add("visible");
 
-  await sleep(800);
+  await sleep(400);
 
   // Reveal your board one by one
   for (let i = 0; i < yourUnits.length; i++) {
     revealUnit(yourUnits[i], yourReveal[i]);
-    await sleep(600);
+    await sleep(300);
   }
-  await sleep(400);
+  await sleep(200);
 
   // Reveal opponent board one by one
   for (let i = 0; i < oppUnits.length; i++) {
     revealUnit(oppUnits[i], oppReveal[i]);
-    await sleep(600);
+    await sleep(300);
   }
-  await sleep(600);
+  await sleep(300);
 
   // Now score royals one by one
   document.getElementById("go-title").textContent = "Scoring royals...";
-  await sleep(500);
+  await sleep(250);
 
   let yourTotal = 0;
   for (let i = 0; i < yourUnits.length; i++) {
     const pts = yourReveal[i].points;
     if (pts > 0) {
       yourUnits[i].el.classList.add("scoring");
-      await sleep(300);
+      await sleep(150);
       yourUnits[i].el.classList.add("scored");
       yourUnits[i].badge.textContent = "+" + pts;
       yourUnits[i].badge.style.display = "block";
       yourUnits[i].badge.classList.add("anim-pop");
       yourTotal += pts;
       document.getElementById("go-your-score").textContent = "Your score: " + yourTotal;
-      await sleep(700);
+      await sleep(350);
     }
   }
   if (yourTotal === 0) document.getElementById("go-your-score").textContent = "Your score: 0";
@@ -3377,19 +3450,19 @@ async function playEndgameAnimation() {
     const pts = oppReveal[i].points;
     if (pts > 0) {
       oppUnits[i].el.classList.add("scoring");
-      await sleep(300);
+      await sleep(150);
       oppUnits[i].el.classList.add("scored");
       oppUnits[i].badge.textContent = "+" + pts;
       oppUnits[i].badge.style.display = "block";
       oppUnits[i].badge.classList.add("anim-pop");
       oppTotal += pts;
       document.getElementById("go-opp-score").textContent = "Opponent's score: " + oppTotal;
-      await sleep(700);
+      await sleep(350);
     }
   }
   if (oppTotal === 0) document.getElementById("go-opp-score").textContent = "Opponent's score: 0";
 
-  await sleep(800);
+  await sleep(400);
 
   // Final result
   if (yourTotal > oppTotal) document.getElementById("go-title").textContent = "You Win!";

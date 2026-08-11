@@ -195,6 +195,22 @@ def all_player_game_counts():
     return out
 
 
+def recent_games(limit=5):
+    """Most recently finished games across all players, newest first."""
+    out = []
+    for r in GameRecord.query.order_by(GameRecord.finished_at.desc()).limit(limit).all():
+        out.append({
+            "finished_at": r.finished_at.isoformat(),
+            "p1_name": r.p1_name,
+            "p2_name": r.p2_name,
+            "p1_score": r.p1_score,
+            "p2_score": r.p2_score,
+            "winner": r.winner,
+            "vs_bot": r.vs_bot,
+        })
+    return out
+
+
 def user_history(user_id, limit=10):
     out = []
     for r in _records_for(user_id).limit(limit).all():
