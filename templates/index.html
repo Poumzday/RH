@@ -608,10 +608,12 @@ body.on-menu {
 #settings-btn:hover { background:rgba(0,0,0,0.6); }
 
 /* Challenge bell (home screen only) */
-#challenge-bell { position:absolute; top:16px; right:16px; z-index:20; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:50%; width:40px; height:40px; font-size:1.2rem; cursor:pointer; line-height:38px; text-align:center; }
-#challenge-bell:hover { background:rgba(0,0,0,0.55); }
+#challenge-bell { position:fixed; top:12px; right:100px; z-index:150; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:50%; width:36px; height:36px; font-size:1.1rem; cursor:pointer; line-height:36px; text-align:center; }
+#challenge-bell:hover { background:rgba(0,0,0,0.6); }
 #challenge-badge { position:absolute; top:-4px; right:-4px; background:#e53935; color:#fff; font-size:0.65rem; font-weight:800; border-radius:50%; min-width:16px; height:16px; line-height:16px; padding:0 3px; }
-#challenge-dropdown { display:none; position:absolute; top:62px; right:16px; width:260px; max-height:320px; overflow-y:auto; background:#1b3a24; border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:10px; z-index:21; box-shadow:0 8px 24px rgba(0,0,0,0.5); text-align:left; }
+#challenge-dropdown { display:none; position:fixed; top:54px; right:12px; width:260px; max-height:320px; overflow-y:auto; background:#1b3a24; border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:10px; z-index:151; box-shadow:0 8px 24px rgba(0,0,0,0.5); text-align:left; }
+#challenge-dropdown.just-opened { animation: challengePop 0.3s ease-out; }
+@keyframes challengePop { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 .challenge-row { background:rgba(0,0,0,0.25); border-radius:8px; padding:8px; margin-bottom:6px; font-size:0.85rem; }
 .challenge-row:last-child { margin-bottom:0; }
 
@@ -744,13 +746,6 @@ body.on-menu {
 <div class="menu-deco menu-deco-4">♗</div>
 
 <div id="menu">
-  <button id="challenge-bell" onclick="toggleChallengeDropdown()" style="display:none;">
-    🔔<span id="challenge-badge" style="display:none;">0</span>
-  </button>
-  <div id="challenge-dropdown">
-    <div style="font-weight:700;font-size:0.85rem;margin-bottom:8px;opacity:0.8;">Challenges</div>
-    <div id="challenge-list"></div>
-  </div>
   <div class="crown">♛</div>
   <div class="title">ROYALTY HIGH</div>
   <div class="subtitle">A Game of Strategy and Crowns</div>
@@ -857,6 +852,15 @@ body.on-menu {
     <div style="margin-top:12px;"><span class="spinner"></span></div>
     <button class="btn btn-secondary btn-sm" style="margin-top:18px;" onclick="location.reload()">Cancel</button>
   </div>
+</div>
+
+<!-- Direct-challenge bell: fixed, visible on every screen whenever logged in -->
+<button id="challenge-bell" onclick="toggleChallengeDropdown()" style="display:none;">
+  🔔<span id="challenge-badge" style="display:none;">0</span>
+</button>
+<div id="challenge-dropdown">
+  <div style="font-weight:700;font-size:0.85rem;margin-bottom:8px;opacity:0.8;">Challenges</div>
+  <div id="challenge-list"></div>
 </div>
 
 <!-- In-game help button -->
@@ -1633,8 +1637,19 @@ function respondChallenge(id, accept) {
 }
 
 socket.on("challenges_update", (data) => {
-  pendingChallenges = data.challenges || [];
+  const newList = data.challenges || [];
+  const hasNewChallenge = newList.some(c => !pendingChallenges.find(p => p.id === c.id));
+  pendingChallenges = newList;
   updateChallengeBell();
+  // Pop the dropdown open automatically, wherever the player currently is,
+  // instead of just quietly updating the badge.
+  if (hasNewChallenge) {
+    const dd = document.getElementById("challenge-dropdown");
+    dd.style.display = "block";
+    dd.classList.remove("just-opened");
+    void dd.offsetWidth; // restart the animation
+    dd.classList.add("just-opened");
+  }
 });
 
 socket.on("challenge_error", (data) => {
