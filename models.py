@@ -77,6 +77,14 @@ class GameRecord(db.Model):
     boards_json = db.Column(db.Text, nullable=False)  # {"p1": [...units...], "p2": [...]}
 
 
+class ChallengeContact(db.Model):
+    """Records that one user has sent a direct challenge to another, for the quick-pick dropdown."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    opponent_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    last_challenged_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 def create_user(username, password):
     """Returns (user, error). error is a user-facing string or None."""
     username = username.strip()
@@ -143,6 +151,29 @@ def user_stats(user_id):
     return {"wins": wins, "losses": losses, "ties": ties, "total": total}
 
 
+def leaderboard(min_games_for_winrate=15, limit=50):
+    """Returns (by_wins, by_winrate) rankings across all registered players.
+    by_wins includes anyone with at least 1 game; by_winrate requires
+    min_games_for_winrate games to filter out small-sample-size records."""
+    rows = []
+    for u in User.query.all():
+        stats = user_stats(u.id)
+        if stats["total"] == 0:
+            continue
+        winrate = (stats["wins"] + 0.5 * stats["ties"]) / stats["total"] * 100
+        rows.append({
+            "username": u.username, "display_name": u.display_name,
+            "wins": stats["wins"], "losses": stats["losses"], "ties": stats["ties"],
+            "total": stats["total"], "winrate": round(winrate, 1),
+        })
+    by_wins = sorted(rows, key=lambda p: (-p["wins"], p["display_name"].lower()))[:limit]
+    by_winrate = sorted(
+        [p for p in rows if p["total"] >= min_games_for_winrate],
+        key=lambda p: (-p["winrate"], p["display_name"].lower())
+    )[:limit]
+    return by_wins, by_winrate
+
+
 def head_to_head(user_id, opp_id):
     """My (user_id) record and games against a specific opponent, from my perspective."""
     games = GameRecord.query.filter(
@@ -181,6 +212,28 @@ def opponents_played(user_id):
         if other and other != user_id:
             opp_ids.add(other)
     return opp_ids
+
+
+def record_challenge_contact(user_id, opponent_id):
+    """Remember that user_id has challenged opponent_id, for the quick-pick dropdown."""
+    row = ChallengeContact.query.filter_by(user_id=user_id, opponent_id=opponent_id).first()
+    if row:
+        row.last_challenged_at = datetime.now(timezone.utc)
+    else:
+        db.session.add(ChallengeContact(user_id=user_id, opponent_id=opponent_id))
+    db.session.commit()
+
+
+def challenge_contacts(user_id):
+    """Users this user has challenged before, most recently challenged first."""
+    rows = (ChallengeContact.query.filter_by(user_id=user_id)
+            .order_by(ChallengeContact.last_challenged_at.desc()).all())
+    out = []
+    for row in rows:
+        u = db.session.get(User, row.opponent_id)
+        if u:
+            out.append({"username": u.username, "display_name": u.display_name})
+    return out
 
 
 def all_player_game_counts():

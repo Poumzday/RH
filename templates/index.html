@@ -600,6 +600,14 @@ body.on-menu {
 #settings-btn { position:fixed; top:12px; right:56px; z-index:100; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:50%; width:36px; height:36px; font-size:1.1rem; cursor:pointer; display:none; line-height:36px; text-align:center; }
 #settings-btn:hover { background:rgba(0,0,0,0.6); }
 
+/* Challenge bell (home screen only) */
+#challenge-bell { position:absolute; top:16px; right:16px; z-index:20; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:50%; width:40px; height:40px; font-size:1.2rem; cursor:pointer; line-height:38px; text-align:center; }
+#challenge-bell:hover { background:rgba(0,0,0,0.55); }
+#challenge-badge { position:absolute; top:-4px; right:-4px; background:#e53935; color:#fff; font-size:0.65rem; font-weight:800; border-radius:50%; min-width:16px; height:16px; line-height:16px; padding:0 3px; }
+#challenge-dropdown { display:none; position:absolute; top:62px; right:16px; width:260px; max-height:320px; overflow-y:auto; background:#1b3a24; border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:10px; z-index:21; box-shadow:0 8px 24px rgba(0,0,0,0.5); text-align:left; }
+.challenge-row { background:rgba(0,0,0,0.25); border-radius:8px; padding:8px; margin-bottom:6px; font-size:0.85rem; }
+.challenge-row:last-child { margin-bottom:0; }
+
 /* Game walkthrough overlay — mirrors the real #game layout */
 #walkthrough-overlay { position:fixed; inset:0; background:#1a5c2a; z-index:400; display:none; flex-direction:column; align-items:center; padding:16px; overflow:auto; }
 #walkthrough-overlay.visible { display:flex; }
@@ -670,7 +678,9 @@ body.on-menu {
 .opt-toggle:hover { background:rgba(255,255,255,0.15); }
 .opt-toggle.active { background:rgba(67,160,71,0.35); border-color:#43a047; color:#fff; box-shadow:0 0 8px rgba(67,160,71,0.4); }
 #time-limit-slider { padding:4px 2px; }
+#chal-time-limit-slider { padding:4px 2px; }
 #time-limit-slider input[type="range"] { width:100%; accent-color:#43a047; cursor:pointer; }
+#chal-time-limit-slider input[type="range"] { width:100%; accent-color:#43a047; cursor:pointer; }
 #time-limit-slider .tl-label { font-size:0.75rem; opacity:0.8; margin-top:2px; }
 #turn-timer { font-weight:bold; font-size:0.95rem; }
 .mode-badges { display:flex; gap:6px; }
@@ -721,14 +731,22 @@ body.on-menu {
 <div class="menu-deco menu-deco-4">♗</div>
 
 <div id="menu">
+  <button id="challenge-bell" onclick="toggleChallengeDropdown()" style="display:none;">
+    🔔<span id="challenge-badge" style="display:none;">0</span>
+  </button>
+  <div id="challenge-dropdown">
+    <div style="font-weight:700;font-size:0.85rem;margin-bottom:8px;opacity:0.8;">Challenges</div>
+    <div id="challenge-list"></div>
+  </div>
   <div class="crown">♛</div>
   <div class="title">ROYALTY HIGH</div>
   <div class="subtitle">A Game of Strategy and Crowns</div>
   <div class="crests">⚔ ♕ ♔ ♕ ⚔</div>
   <div class="menu-btns">
     <button class="btn btn-coming" disabled>Play Online <span class="coming-soon">Coming Soon</span></button>
-    <button class="btn btn-primary" onclick="showRoomScreen()">Play With Friends</button>
+    <button class="btn btn-primary" onclick="showFriendsModeScreen()">Play With Friends</button>
     <button class="btn btn-secondary" onclick="showHelp()">How to Play</button>
+    <button class="btn btn-secondary" onclick="showLeaderboard()">Leaderboard</button>
   </div>
   <div id="account-area">
     <div id="account-logged-out">
@@ -751,9 +769,20 @@ body.on-menu {
   </div>
 </div>
 
-<div id="room-screen" class="room-screen">
+<div id="friends-mode-screen" class="room-screen">
   <div class="room-box">
     <h2>Play With Friends</h2>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+      <button class="btn btn-primary" style="padding:12px;font-size:1rem;" onclick="showRoomScreen()">Create / Join Room</button>
+      <button class="btn btn-gold" style="padding:12px;font-size:1rem;" onclick="showChallengeScreen()">Direct Challenge</button>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="backToMenu()">Back</button>
+  </div>
+</div>
+
+<div id="room-screen" class="room-screen">
+  <div class="room-box">
+    <h2>Create / Join Room</h2>
     <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
       <button class="btn btn-primary" style="padding:12px;font-size:1rem;" onclick="createRoom()">Create Room</button>
       <div class="game-options">
@@ -774,7 +803,33 @@ body.on-menu {
       </div>
       <div class="room-error" id="join-error"></div>
     </div>
-    <button class="btn btn-secondary btn-sm" onclick="backToMenu()">Back</button>
+    <button class="btn btn-secondary btn-sm" onclick="showFriendsModeScreen()">Back</button>
+  </div>
+</div>
+
+<div id="challenge-screen" class="room-screen">
+  <div class="room-box">
+    <h2>Direct Challenge</h2>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+      <div class="game-options">
+        <button class="opt-toggle" id="chal-opt-no-scoring" onclick="toggleChallengeOpt('no_scoring')">No Scoring</button>
+        <button class="opt-toggle" id="chal-opt-reveal-attacked" onclick="toggleChallengeOpt('reveal_attacked')">Reveal Attacked</button>
+        <button class="opt-toggle" id="chal-opt-time-limit" onclick="toggleChallengeTimeLimit()">Time Limit</button>
+      </div>
+      <div id="chal-time-limit-slider" style="display:none;">
+        <input type="range" id="chal-tl-range" min="15" max="120" step="5" value="30" oninput="setChallengeTimeLimit(this.value)">
+        <div class="tl-label"><span id="chal-time-limit-value">30s</span> per turn</div>
+      </div>
+      <div style="opacity:0.4;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;margin-top:6px;">Challenge a player</div>
+      <select class="room-input" id="challenge-recent-select" style="width:auto;font-size:0.85rem;letter-spacing:normal;text-transform:none;padding:8px 12px;" onchange="if(this.value){document.getElementById('challenge-username-input').value=this.value;}">
+        <option value="">Recently challenged…</option>
+      </select>
+      <input class="room-input" id="challenge-username-input" placeholder="Username" style="text-transform:none;letter-spacing:normal;font-size:1rem;width:auto;" onkeydown="if(event.key==='Enter')sendChallenge()">
+      <button class="btn btn-gold" style="padding:10px;font-size:0.9rem;" onclick="sendChallenge()">Send Challenge</button>
+      <div class="room-error" id="challenge-error"></div>
+      <div id="challenge-sent-msg" style="opacity:0.9;font-size:0.85rem;color:#81c784;display:none;"></div>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="showFriendsModeScreen()">Back</button>
   </div>
 </div>
 
@@ -1185,6 +1240,20 @@ body.on-menu {
   </div>
 </div>
 
+<div id="leaderboard-screen" class="room-screen">
+  <div class="room-box" style="max-width:520px;width:94vw;">
+    <h2 style="margin-bottom:4px;">Leaderboard</h2>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="opt-toggle active" id="lb-tab-wins" onclick="showLeaderboardTab('wins')">Most Wins</button>
+      <button class="opt-toggle" id="lb-tab-winrate" onclick="showLeaderboardTab('winrate')">Win Rate</button>
+    </div>
+    <div style="opacity:0.4;font-size:0.7rem;margin-top:6px;">Win Rate requires 15+ games played</div>
+    <div id="lb-wins-list" class="stats-history" style="margin-top:10px;"></div>
+    <div id="lb-winrate-list" class="stats-history" style="margin-top:10px;display:none;"></div>
+    <button class="btn btn-secondary btn-sm" style="margin-top:16px;" onclick="backToMenu()">Back</button>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
 <script>
 const S = {hearts:"\u2665", diamonds:"\u2666", clubs:"\u2663", spades:"\u2660"};
@@ -1449,8 +1518,13 @@ function applyWinrateBg(winrate) {
 
 function hideAll() {
   document.getElementById("menu").style.display = "none";
+  document.getElementById("friends-mode-screen").classList.remove("visible");
+  document.getElementById("friends-mode-screen").style.display = "none";
   document.getElementById("room-screen").classList.remove("visible");
   document.getElementById("room-screen").style.display = "none";
+  document.getElementById("challenge-screen").classList.remove("visible");
+  document.getElementById("challenge-screen").style.display = "none";
+  document.getElementById("challenge-dropdown").style.display = "none";
   document.getElementById("waiting").classList.remove("visible");
   document.getElementById("waiting").style.display = "none";
   document.getElementById("game").style.display = "none";
@@ -1465,6 +1539,9 @@ function hideAll() {
   const admin = document.getElementById("admin-screen");
   admin.classList.remove("visible");
   admin.style.display = "none";
+  const leaderboard = document.getElementById("leaderboard-screen");
+  leaderboard.classList.remove("visible");
+  leaderboard.style.display = "none";
 }
 
 function backToMenu() {
@@ -1492,7 +1569,80 @@ function updateAccountUI() {
     inEl.style.display = "none";
     outEl.style.display = "block";
   }
+  updateChallengeBell();
 }
+
+// --- Direct Challenges ---
+let pendingChallenges = [];
+
+function updateChallengeBell() {
+  const bell = document.getElementById("challenge-bell");
+  const badge = document.getElementById("challenge-badge");
+  if (!currentUser) {
+    bell.style.display = "none";
+    document.getElementById("challenge-dropdown").style.display = "none";
+    pendingChallenges = [];
+    return;
+  }
+  bell.style.display = "block";
+  if (pendingChallenges.length > 0) {
+    badge.style.display = "block";
+    badge.textContent = pendingChallenges.length;
+  } else {
+    badge.style.display = "none";
+    document.getElementById("challenge-dropdown").style.display = "none";
+  }
+  renderChallengeDropdown();
+}
+
+function renderChallengeDropdown() {
+  const list = document.getElementById("challenge-list");
+  if (!pendingChallenges.length) {
+    list.innerHTML = '<div style="opacity:0.6;font-size:0.8rem;">No pending challenges.</div>';
+    return;
+  }
+  list.innerHTML = pendingChallenges.map(c => `
+    <div class="challenge-row">
+      <div style="margin-bottom:6px;"><strong>${c.from_display_name}</strong> challenged you</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="respondChallenge('${c.id}', true)">Accept</button>
+        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="respondChallenge('${c.id}', false)">Decline</button>
+      </div>
+    </div>`).join("");
+}
+
+function toggleChallengeDropdown() {
+  const dd = document.getElementById("challenge-dropdown");
+  dd.style.display = dd.style.display === "block" ? "none" : "block";
+}
+
+function respondChallenge(id, accept) {
+  socket.emit("respond_challenge", {id, accept});
+  document.getElementById("challenge-dropdown").style.display = "none";
+}
+
+socket.on("challenges_update", (data) => {
+  pendingChallenges = data.challenges || [];
+  updateChallengeBell();
+});
+
+socket.on("challenge_error", (data) => {
+  const el = document.getElementById("challenge-error");
+  if (el) el.textContent = data.msg;
+});
+
+socket.on("challenge_sent", (data) => {
+  const msg = document.getElementById("challenge-sent-msg");
+  if (msg) {
+    msg.style.display = "block";
+    msg.textContent = "Challenge sent to " + data.display_name + "!";
+  }
+  loadChallengeContacts();
+});
+
+socket.on("challenge_declined", (data) => {
+  alert(data.display_name + " declined your challenge.");
+});
 
 async function refreshMe() {
   try {
@@ -1731,6 +1881,57 @@ async function loadAdminGames() {
   }).join("");
 }
 
+async function showLeaderboard() {
+  hideAll();
+  clearBodyBg();
+  const el = document.getElementById("leaderboard-screen");
+  el.style.display = "flex";
+  el.classList.add("visible");
+  document.getElementById("lb-tab-wins").classList.add("active");
+  document.getElementById("lb-tab-winrate").classList.remove("active");
+  document.getElementById("lb-wins-list").style.display = "";
+  document.getElementById("lb-winrate-list").style.display = "none";
+  await loadLeaderboard();
+}
+
+function showLeaderboardTab(tab) {
+  document.getElementById("lb-tab-wins").classList.toggle("active", tab === "wins");
+  document.getElementById("lb-tab-winrate").classList.toggle("active", tab === "winrate");
+  document.getElementById("lb-wins-list").style.display = tab === "wins" ? "" : "none";
+  document.getElementById("lb-winrate-list").style.display = tab === "winrate" ? "" : "none";
+}
+
+async function loadLeaderboard() {
+  const winsList = document.getElementById("lb-wins-list");
+  const wrList = document.getElementById("lb-winrate-list");
+  winsList.innerHTML = '<div class="hist-empty">Loading…</div>';
+  wrList.innerHTML = "";
+  let data = { by_wins: [], by_winrate: [] };
+  try {
+    const r = await fetch("/api/leaderboard");
+    data = await r.json();
+  } catch (e) {
+    winsList.innerHTML = '<div class="hist-empty">Could not load.</div>';
+    return;
+  }
+  const byWins = data.by_wins || [];
+  const byWinrate = data.by_winrate || [];
+  winsList.innerHTML = byWins.length ? byWins.map((p, i) => `
+    <div class="hist-row">
+      <div class="hist-head">
+        <span>#${i + 1} ${p.display_name}</span>
+        <span class="hist-result">${p.wins} win${p.wins === 1 ? "" : "s"}</span>
+      </div>
+    </div>`).join("") : '<div class="hist-empty">No games played yet.</div>';
+  wrList.innerHTML = byWinrate.length ? byWinrate.map((p, i) => `
+    <div class="hist-row">
+      <div class="hist-head">
+        <span>#${i + 1} ${p.display_name}</span>
+        <span class="hist-result">${p.winrate}% <span style="opacity:0.6;font-weight:400;">(${p.wins}-${p.losses}${p.ties ? "-" + p.ties : ""})</span></span>
+      </div>
+    </div>`).join("") : '<div class="hist-empty">No players with 15+ games yet.</div>';
+}
+
 function loadStatsView(value) {
   if (value === "__overall__" || !value) loadOverall();
   else loadHeadToHead(value);
@@ -1850,6 +2051,91 @@ async function loadHeadToHead(username) {
 
 // Show menu styling on load
 document.addEventListener("DOMContentLoaded", () => { document.body.classList.add("on-menu"); refreshMe(); });
+
+function showFriendsModeScreen() {
+  hideAll();
+  clearBodyBg();
+  const el = document.getElementById("friends-mode-screen");
+  el.style.display = "flex";
+  el.classList.add("visible");
+}
+
+let challengeOptions = { no_scoring: false, reveal_attacked: false, time_limit: 0 };
+
+function showChallengeScreen() {
+  hideAll();
+  clearBodyBg();
+  const el = document.getElementById("challenge-screen");
+  el.style.display = "flex";
+  el.classList.add("visible");
+  document.getElementById("challenge-error").textContent = "";
+  document.getElementById("challenge-sent-msg").style.display = "none";
+  document.getElementById("challenge-username-input").value = "";
+  document.getElementById("chal-opt-no-scoring").classList.toggle("active", challengeOptions.no_scoring);
+  // Seed from the logged-in user's saved defaults.
+  challengeOptions.reveal_attacked = !!(currentUser && currentUser.reveal_attacked_default);
+  document.getElementById("chal-opt-reveal-attacked").classList.toggle("active", challengeOptions.reveal_attacked);
+  const tlDefault = (currentUser && currentUser.time_limit_default) || 0;
+  challengeOptions.time_limit = tlDefault;
+  document.getElementById("chal-opt-time-limit").classList.toggle("active", tlDefault > 0);
+  const tlSlider = document.getElementById("chal-time-limit-slider");
+  if (tlDefault > 0) {
+    tlSlider.style.display = "block";
+    document.getElementById("chal-tl-range").value = tlDefault;
+    document.getElementById("chal-time-limit-value").textContent = tlDefault + "s";
+  } else {
+    tlSlider.style.display = "none";
+  }
+  loadChallengeContacts();
+}
+
+function toggleChallengeOpt(key) {
+  challengeOptions[key] = !challengeOptions[key];
+  const id = key === "no_scoring" ? "chal-opt-no-scoring" : "chal-opt-reveal-attacked";
+  document.getElementById(id).classList.toggle("active", challengeOptions[key]);
+}
+function toggleChallengeTimeLimit() {
+  const on = challengeOptions.time_limit === 0;
+  const slider = document.getElementById("chal-time-limit-slider");
+  if (on) {
+    challengeOptions.time_limit = parseInt(document.getElementById("chal-tl-range").value);
+    slider.style.display = "block";
+  } else {
+    challengeOptions.time_limit = 0;
+    slider.style.display = "none";
+  }
+  document.getElementById("chal-opt-time-limit").classList.toggle("active", on);
+}
+function setChallengeTimeLimit(v) {
+  challengeOptions.time_limit = parseInt(v);
+  document.getElementById("chal-time-limit-value").textContent = v + "s";
+}
+
+async function loadChallengeContacts() {
+  const sel = document.getElementById("challenge-recent-select");
+  sel.innerHTML = '<option value="">Recently challenged…</option>';
+  if (!currentUser) return;
+  try {
+    const r = await fetch("/api/challenge_contacts");
+    const d = await r.json();
+    (d.contacts || []).forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.username;
+      opt.textContent = c.display_name;
+      sel.appendChild(opt);
+    });
+  } catch (e) {}
+}
+
+function sendChallenge() {
+  const input = document.getElementById("challenge-username-input");
+  const username = input.value.trim();
+  document.getElementById("challenge-error").textContent = "";
+  document.getElementById("challenge-sent-msg").style.display = "none";
+  if (!currentUser) { document.getElementById("challenge-error").textContent = "Log in to send a challenge."; return; }
+  if (!username) { document.getElementById("challenge-error").textContent = "Enter a username."; return; }
+  socket.emit("send_challenge", Object.assign({username}, challengeOptions));
+}
 
 function showRoomScreen() {
   hideAll();

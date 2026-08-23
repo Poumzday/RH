@@ -27,6 +27,12 @@ socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins="*")
 # sid -> user_id / display name for sockets belonging to a logged-in player (set at connect)
 sid_to_user = {}
 sid_to_name = {}
+# user_id -> that user's most recently connected sid (for delivering direct challenges)
+user_to_sid = {}
+# user_id -> list of pending incoming challenge dicts awaiting accept/decline
+pending_challenges = {}
+# challenge_id -> challenge dict, for O(1) lookup on response
+challenges_by_id = {}
 
 
 def display_name_for(sid):
@@ -1250,6 +1256,15 @@ def api_players():
     return jsonify({"players": players})
 
 
+@app.route("/api/challenge_contacts")
+def api_challenge_contacts():
+    """Players the logged-in user has previously sent a direct challenge to."""
+    me = _current_user()
+    if not me:
+        return jsonify({"contacts": []})
+    return jsonify({"contacts": models.challenge_contacts(me.id)})
+
+
 ADMIN_USERNAME = "poumsday"
 
 
@@ -1299,6 +1314,12 @@ def api_overall():
     })
 
 
+@app.route("/api/leaderboard")
+def api_leaderboard():
+    by_wins, by_winrate = models.leaderboard(min_games_for_winrate=15)
+    return jsonify({"by_wins": by_wins, "by_winrate": by_winrate})
+
+
 @socketio.on("create_room")
 def on_create_room(data=None):
     data = data or {}
@@ -1321,6 +1342,90 @@ def on_create_room(data=None):
     join_room(game.id)
     player_game[sid] = game_id
     socketio.emit("room_created", {"room_code": code}, to=sid)
+
+
+@socketio.on("send_challenge")
+def on_send_challenge(data):
+    sid = request.sid
+    me = _current_user()
+    if not me:
+        socketio.emit("challenge_error", {"msg": "Log in to send a challenge."}, to=sid)
+        return
+    data = data or {}
+    username = (data.get("username") or "").strip().lower()
+    target = models.User.query.filter_by(username=username).first()
+    if not target:
+        socketio.emit("challenge_error", {"msg": "No player with that username."}, to=sid)
+        return
+    if target.id == me.id:
+        socketio.emit("challenge_error", {"msg": "You can't challenge yourself."}, to=sid)
+        return
+    target_sid = user_to_sid.get(target.id)
+    if target_sid and player_game.get(target_sid):
+        socketio.emit("challenge_error", {"msg": f"{target.display_name} is currently in a game."}, to=sid)
+        return
+    try:
+        tl = int(data.get("time_limit") or 0)
+    except (TypeError, ValueError):
+        tl = 0
+    tl = tl if 15 <= tl <= 120 else 0
+    challenge_id = str(uuid.uuid4())[:8]
+    challenge = {
+        "id": challenge_id,
+        "from_user_id": me.id,
+        "from_username": me.username,
+        "from_display_name": me.display_name,
+        "to_user_id": target.id,
+        "no_scoring": bool(data.get("no_scoring")),
+        "reveal_attacked": bool(data.get("reveal_attacked")),
+        "time_limit": tl,
+    }
+    challenges_by_id[challenge_id] = challenge
+    pending_challenges.setdefault(target.id, []).append(challenge)
+    models.record_challenge_contact(me.id, target.id)
+    if target_sid:
+        socketio.emit("challenges_update", {"challenges": pending_challenges[target.id]}, to=target_sid)
+    socketio.emit("challenge_sent", {"display_name": target.display_name}, to=sid)
+
+
+@socketio.on("respond_challenge")
+def on_respond_challenge(data):
+    sid = request.sid
+    me = _current_user()
+    if not me:
+        return
+    data = data or {}
+    challenge_id = data.get("id")
+    accept = bool(data.get("accept"))
+    challenge = challenges_by_id.get(challenge_id)
+    if not challenge or challenge["to_user_id"] != me.id:
+        return
+    challenges_by_id.pop(challenge_id, None)
+    remaining = [c for c in pending_challenges.get(me.id, []) if c["id"] != challenge_id]
+    pending_challenges[me.id] = remaining
+    socketio.emit("challenges_update", {"challenges": remaining}, to=sid)
+
+    challenger_sid = user_to_sid.get(challenge["from_user_id"])
+    if not accept:
+        if challenger_sid:
+            socketio.emit("challenge_declined", {"display_name": me.display_name}, to=challenger_sid)
+        return
+    if not challenger_sid or player_game.get(challenger_sid) or player_game.get(sid):
+        socketio.emit("challenge_error", {"msg": "That player is no longer available."}, to=sid)
+        return
+    game_id = str(uuid.uuid4())[:8]
+    game = Game(game_id)
+    game.no_scoring = challenge["no_scoring"]
+    game.reveal_attacked = challenge["reveal_attacked"]
+    game.time_limit = challenge["time_limit"]
+    game.add_player(challenger_sid)
+    game.add_player(sid)
+    games[game_id] = game
+    join_room(game.id, sid=challenger_sid)
+    join_room(game.id, sid=sid)
+    player_game[challenger_sid] = game_id
+    player_game[sid] = game_id
+    broadcast_state(game)
 
 
 @socketio.on("join_room_code")
@@ -1495,14 +1600,21 @@ def on_connect():
     uid = session.get("user_id")
     if uid:
         sid_to_user[request.sid] = uid
+        user_to_sid[uid] = request.sid
         u = models.db.session.get(models.User, uid)
         if u:
             sid_to_name[request.sid] = u.display_name
+        pending = pending_challenges.get(uid)
+        if pending:
+            socketio.emit("challenges_update", {"challenges": pending}, to=request.sid)
 
 
 @socketio.on("disconnect")
 def on_disconnect():
     sid = request.sid
+    uid = sid_to_user.get(sid)
+    if uid is not None and user_to_sid.get(uid) == sid:
+        user_to_sid.pop(uid, None)
     sid_to_user.pop(sid, None)
     sid_to_name.pop(sid, None)
     game_id = player_game.pop(sid, None)
