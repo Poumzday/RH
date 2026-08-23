@@ -151,14 +151,13 @@ def user_stats(user_id):
     return {"wins": wins, "losses": losses, "ties": ties, "total": total}
 
 
-def leaderboard(min_games_for_winrate=15, limit=50):
-    """Returns (by_wins, by_winrate) rankings across all registered players.
-    by_wins includes anyone with at least 1 game; by_winrate requires
-    min_games_for_winrate games to filter out small-sample-size records."""
+def leaderboard(min_games=15, limit=50):
+    """Players ranked by win rate, highest first. Requires min_games played
+    to filter out small-sample-size records (e.g. a 1-0 record ranking #1)."""
     rows = []
     for u in User.query.all():
         stats = user_stats(u.id)
-        if stats["total"] == 0:
+        if stats["total"] < min_games:
             continue
         winrate = (stats["wins"] + 0.5 * stats["ties"]) / stats["total"] * 100
         rows.append({
@@ -166,12 +165,8 @@ def leaderboard(min_games_for_winrate=15, limit=50):
             "wins": stats["wins"], "losses": stats["losses"], "ties": stats["ties"],
             "total": stats["total"], "winrate": round(winrate, 1),
         })
-    by_wins = sorted(rows, key=lambda p: (-p["wins"], p["display_name"].lower()))[:limit]
-    by_winrate = sorted(
-        [p for p in rows if p["total"] >= min_games_for_winrate],
-        key=lambda p: (-p["winrate"], p["display_name"].lower())
-    )[:limit]
-    return by_wins, by_winrate
+    rows.sort(key=lambda p: (-p["winrate"], p["display_name"].lower()))
+    return rows[:limit]
 
 
 def head_to_head(user_id, opp_id):
@@ -246,6 +241,26 @@ def all_player_game_counts():
         out.append({"username": u.username, "display_name": u.display_name, "games": total})
     out.sort(key=lambda p: (-p["games"], p["display_name"].lower()))
     return out
+
+
+def search_players(query, exclude_user_id=None, limit=10):
+    """Registered players whose username or display name contains query
+    (min 3 chars), busiest (most games played) first."""
+    q = (query or "").strip().lower()
+    if len(q) < 3:
+        return []
+    out = []
+    for u in User.query.all():
+        if u.id == exclude_user_id:
+            continue
+        if q not in u.username.lower() and q not in u.display_name.lower():
+            continue
+        total = GameRecord.query.filter(
+            (GameRecord.p1_user_id == u.id) | (GameRecord.p2_user_id == u.id)
+        ).count()
+        out.append({"username": u.username, "display_name": u.display_name, "games": total})
+    out.sort(key=lambda p: (-p["games"], p["display_name"].lower()))
+    return out[:limit]
 
 
 def recent_games(limit=5):

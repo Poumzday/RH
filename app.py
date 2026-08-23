@@ -1265,6 +1265,15 @@ def api_challenge_contacts():
     return jsonify({"contacts": models.challenge_contacts(me.id)})
 
 
+@app.route("/api/search_players")
+def api_search_players():
+    """Registered players matching a query, for the direct-challenge picker."""
+    me = _current_user()
+    q = request.args.get("q", "")
+    results = models.search_players(q, exclude_user_id=me.id if me else None)
+    return jsonify({"players": results})
+
+
 ADMIN_USERNAME = "poumsday"
 
 
@@ -1316,8 +1325,7 @@ def api_overall():
 
 @app.route("/api/leaderboard")
 def api_leaderboard():
-    by_wins, by_winrate = models.leaderboard(min_games_for_winrate=15)
-    return jsonify({"by_wins": by_wins, "by_winrate": by_winrate})
+    return jsonify({"players": models.leaderboard(min_games=15)})
 
 
 @socketio.on("create_room")
