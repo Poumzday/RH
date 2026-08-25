@@ -33,6 +33,7 @@ user_to_sid = {}
 pending_challenges = {}
 # challenge_id -> challenge dict, for O(1) lookup on response
 challenges_by_id = {}
+CHALLENGE_EXPIRY_SECONDS = 600
 
 
 def display_name_for(sid):
@@ -1372,6 +1373,12 @@ def on_send_challenge(data):
     if target_sid and player_game.get(target_sid):
         socketio.emit("challenge_error", {"msg": f"{target.display_name} is currently in a game."}, to=sid)
         return
+    if any(c["from_user_id"] == me.id for c in pending_challenges.get(target.id, [])):
+        socketio.emit("challenge_error", {
+            "msg": f"You already have a pending challenge to {target.display_name}. "
+                   f"Wait for them to respond or for it to expire."
+        }, to=sid)
+        return
     try:
         tl = int(data.get("time_limit") or 0)
     except (TypeError, ValueError):
@@ -1394,6 +1401,27 @@ def on_send_challenge(data):
     if target_sid:
         socketio.emit("challenges_update", {"challenges": pending_challenges[target.id]}, to=target_sid)
     socketio.emit("challenge_sent", {"display_name": target.display_name}, to=sid)
+
+    me_id, me_display_name = me.id, me.display_name
+    target_id, target_display_name = target.id, target.display_name
+
+    def _expire_challenge():
+        socketio.sleep(CHALLENGE_EXPIRY_SECONDS)
+        if challenges_by_id.pop(challenge_id, None) is None:
+            return  # already accepted or declined
+        pending_challenges[target_id] = [
+            c for c in pending_challenges.get(target_id, []) if c["id"] != challenge_id
+        ]
+        t_sid = user_to_sid.get(target_id)
+        if t_sid:
+            socketio.emit("challenges_update", {"challenges": pending_challenges[target_id]}, to=t_sid)
+        from_sid = user_to_sid.get(me_id)
+        if from_sid:
+            socketio.emit("challenge_error", {
+                "msg": f"Your challenge to {target_display_name} expired."
+            }, to=from_sid)
+
+    socketio.start_background_task(_expire_challenge)
 
 
 @socketio.on("respond_challenge")
@@ -1475,6 +1503,32 @@ def on_spectate_room(data):
     join_room(game.id)
     player_game[sid] = game_id
     # Send current state directly to this spectator
+    st = game.get_spectator_state()
+    socketio.emit("game_state", st, to=sid)
+
+
+@socketio.on("spectate_user")
+def on_spectate_user(data):
+    """Spectate whatever game a given (logged-in, online) player is currently in,
+    whether that game started via a room code or a direct challenge."""
+    sid = request.sid
+    data = data or {}
+    username = (data.get("username") or "").strip().lower()
+    target = models.User.query.filter_by(username=username).first()
+    if not target:
+        socketio.emit("join_error", {"msg": "No player with that username."}, to=sid)
+        return
+    target_sid = user_to_sid.get(target.id)
+    game_id = player_game.get(target_sid) if target_sid else None
+    if not game_id or game_id not in games:
+        socketio.emit("join_error", {"msg": f"{target.display_name} is not currently in a game."}, to=sid)
+        return
+    game = games[game_id]
+    if sid in game.players or sid in game.spectators:
+        return
+    game.add_spectator(sid)
+    join_room(game.id)
+    player_game[sid] = game_id
     st = game.get_spectator_state()
     socketio.emit("game_state", st, to=sid)
 

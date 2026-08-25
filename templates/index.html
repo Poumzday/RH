@@ -618,7 +618,7 @@ body.on-menu {
 .challenge-row:last-child { margin-bottom:0; }
 
 /* Direct-challenge player search */
-#challenge-search-results { display:none; position:absolute; top:100%; left:0; right:0; margin-top:4px; max-height:220px; overflow-y:auto; background:#1b3a24; border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:6px; z-index:15; box-shadow:0 8px 24px rgba(0,0,0,0.5); text-align:left; }
+#challenge-search-results, #spectate-search-results { display:none; position:absolute; top:100%; left:0; right:0; margin-top:4px; max-height:220px; overflow-y:auto; background:#1b3a24; border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:6px; z-index:15; box-shadow:0 8px 24px rgba(0,0,0,0.5); text-align:left; }
 .search-result-row { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-radius:6px; cursor:pointer; font-size:0.85rem; }
 .search-result-row:hover { background:rgba(255,255,255,0.1); }
 .search-result-row .srr-games { opacity:0.55; font-size:0.75rem; }
@@ -810,6 +810,12 @@ body.on-menu {
         <button class="btn btn-secondary" style="flex:1;padding:10px;font-size:0.9rem;" onclick="spectateRoom()">Spectate</button>
       </div>
       <div class="room-error" id="join-error"></div>
+      <div style="opacity:0.4;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;margin-top:6px;">or spectate a player</div>
+      <div style="position:relative;">
+        <input class="room-input" id="spectate-username-input" placeholder="Type at least 3 letters of a username…" autocomplete="off" style="text-transform:none;letter-spacing:normal;font-size:1rem;width:100%;" onkeydown="if(event.key==='Enter')spectateUserByName()" oninput="onSpectateSearchInput(this.value)">
+        <div id="spectate-search-results"></div>
+      </div>
+      <button class="btn btn-secondary" style="padding:10px;font-size:0.9rem;" onclick="spectateUserByName()">Spectate Player</button>
     </div>
     <button class="btn btn-secondary btn-sm" onclick="showFriendsModeScreen()">Back</button>
   </div>
@@ -2179,6 +2185,50 @@ function hideChallengeSearchResults() {
   box.innerHTML = "";
 }
 
+// --- Spectate-by-username search (same pattern as the challenge picker) ---
+let spectateSearchTimer = null;
+function onSpectateSearchInput(value) {
+  clearTimeout(spectateSearchTimer);
+  const q = value.trim();
+  if (q.length < 3) { hideSpectateSearchResults(); return; }
+  spectateSearchTimer = setTimeout(() => runSpectateSearch(q), 250);
+}
+
+async function runSpectateSearch(q) {
+  const box = document.getElementById("spectate-search-results");
+  try {
+    const r = await fetch("/api/search_players?q=" + encodeURIComponent(q));
+    const players = (await r.json()).players || [];
+    if (!players.length) { hideSpectateSearchResults(); return; }
+    box.innerHTML = players.map(p => `
+      <div class="search-result-row" onclick="pickSpectateSearchResult('${p.username}')">
+        <span>${p.display_name}</span>
+        <span class="srr-games">${p.games} game${p.games === 1 ? "" : "s"}</span>
+      </div>`).join("");
+    box.style.display = "block";
+  } catch (e) { hideSpectateSearchResults(); }
+}
+
+function pickSpectateSearchResult(username) {
+  document.getElementById("spectate-username-input").value = username;
+  hideSpectateSearchResults();
+}
+
+function hideSpectateSearchResults() {
+  const box = document.getElementById("spectate-search-results");
+  box.style.display = "none";
+  box.innerHTML = "";
+}
+
+function spectateUserByName() {
+  const input = document.getElementById("spectate-username-input");
+  const username = input.value.trim();
+  document.getElementById("join-error").textContent = "";
+  if (!username) { document.getElementById("join-error").textContent = "Enter a username."; return; }
+  hideSpectateSearchResults();
+  socket.emit("spectate_user", {username});
+}
+
 function showRoomScreen() {
   hideAll();
   clearBodyBg();
@@ -2187,6 +2237,8 @@ function showRoomScreen() {
   el.classList.add("visible");
   document.getElementById("join-error").textContent = "";
   document.getElementById("join-code-input").value = "";
+  document.getElementById("spectate-username-input").value = "";
+  hideSpectateSearchResults();
   // Seed the "Reveal Attacked" option from the logged-in user's saved default.
   gameOptions.reveal_attacked = !!(currentUser && currentUser.reveal_attacked_default);
   document.getElementById("opt-reveal-attacked")
