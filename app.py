@@ -9,9 +9,10 @@ if os.environ.get("RENDER"):
     patch_psycopg()
 
 import random
+import time
 import uuid
 import threading
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from flask import Flask, render_template, request, session, jsonify
 from flask_socketio import SocketIO, emit, join_room
 
@@ -300,6 +301,7 @@ class Game:
         self.time_limit = 0            # seconds per turn (0 = no limit)
         self.turn_token = 0            # bumped each turn; used to cancel stale turn timers
         self.bg_winrate = {}           # sid -> head-to-head win rate (0-100) vs opp; cached at game start
+        self.started_at = None         # set when the 2nd player joins and the game actually begins
 
     def add_spectator(self, sid):
         if sid not in self.spectators:
@@ -378,6 +380,7 @@ class Game:
             self.hands[sid] = [self.deck.pop() for _ in range(5)]
         self._compute_bg_winrates()
         self.phase = "mulligan"
+        self.started_at = time.time()
 
     def _compute_bg_winrates(self):
         """Cache each player's head-to-head win rate (0-100) vs their opponent.
@@ -1326,7 +1329,29 @@ def api_overall():
 
 @app.route("/api/leaderboard")
 def api_leaderboard():
+    if request.args.get("period") == "monthly":
+        now = datetime.now(timezone.utc)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        return jsonify({"players": models.leaderboard(min_games=10, since=month_start)})
     return jsonify({"players": models.leaderboard(min_games=15)})
+
+
+@app.route("/api/ongoing_games")
+def api_ongoing_games():
+    """Up to 10 human-vs-human games currently in progress, newest first."""
+    rows = []
+    for game in games.values():
+        if game.has_bot or len(game.players) < 2 or game.phase in ("waiting", "game_over"):
+            continue
+        p1, p2 = game.players
+        rows.append({
+            "game_id": game.id,
+            "p1_name": display_name_for(p1),
+            "p2_name": display_name_for(p2),
+            "started_at": game.started_at or 0,
+        })
+    rows.sort(key=lambda r: -r["started_at"])
+    return jsonify({"games": rows[:10]})
 
 
 @socketio.on("create_room")
@@ -1486,23 +1511,20 @@ def on_join_room(data):
     broadcast_state(game)
 
 
-@socketio.on("spectate_room")
-def on_spectate_room(data):
+@socketio.on("spectate_game")
+def on_spectate_game(data):
+    """Spectate a specific in-progress game, picked from the ongoing-games list."""
     sid = request.sid
-    code = (data.get("code") or "").strip().upper()
-    if code not in rooms:
-        socketio.emit("join_error", {"msg": "Room not found"}, to=sid)
+    game_id = (data or {}).get("game_id")
+    game = games.get(game_id)
+    if not game or len(game.players) < 2 or game.phase in ("waiting", "game_over"):
+        socketio.emit("spectate_error", {"msg": "That game is no longer available."}, to=sid)
         return
-    game_id = rooms[code]
-    if game_id not in games:
-        del rooms[code]
-        socketio.emit("join_error", {"msg": "Room expired"}, to=sid)
+    if sid in game.players or sid in game.spectators:
         return
-    game = games[game_id]
     game.add_spectator(sid)
     join_room(game.id)
     player_game[sid] = game_id
-    # Send current state directly to this spectator
     st = game.get_spectator_state()
     socketio.emit("game_state", st, to=sid)
 
@@ -1516,12 +1538,12 @@ def on_spectate_user(data):
     username = (data.get("username") or "").strip().lower()
     target = models.User.query.filter_by(username=username).first()
     if not target:
-        socketio.emit("join_error", {"msg": "No player with that username."}, to=sid)
+        socketio.emit("spectate_error", {"msg": "No player with that username."}, to=sid)
         return
     target_sid = user_to_sid.get(target.id)
     game_id = player_game.get(target_sid) if target_sid else None
     if not game_id or game_id not in games:
-        socketio.emit("join_error", {"msg": f"{target.display_name} is not currently in a game."}, to=sid)
+        socketio.emit("spectate_error", {"msg": f"{target.display_name} is not currently in a game."}, to=sid)
         return
     game = games[game_id]
     if sid in game.players or sid in game.spectators:

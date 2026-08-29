@@ -507,6 +507,11 @@ body.on-menu {
   text-transform: none; letter-spacing: 0.5px; font-size: 0.7rem;
   color: #ff5252; margin-left: 8px;
 }
+.btn-how-to-play {
+  margin-top: 22px; width: 200px; padding: 9px 0; font-size: 0.8rem;
+  letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600;
+  opacity: 0.8;
+}
 /* Decorative floating cards */
 .menu-deco {
   position: fixed; pointer-events: none; opacity: 0.10; font-size: 6rem;
@@ -748,14 +753,15 @@ body.on-menu {
 <div id="menu">
   <div class="crown">♛</div>
   <div class="title">ROYALTY HIGH</div>
-  <div class="subtitle">A Game of Strategy and Crowns</div>
+  <div class="subtitle">A Game of Crowns and Strategies</div>
   <div class="crests">⚔ ♕ ♔ ♕ ⚔</div>
   <div class="menu-btns">
     <button class="btn btn-coming" disabled>Play Online <span class="coming-soon">Coming Soon</span></button>
     <button class="btn btn-primary" onclick="showFriendsModeScreen()">Play With Friends</button>
-    <button class="btn btn-secondary" onclick="showHelp()">How to Play</button>
+    <button class="btn btn-secondary" onclick="showSpectateScreen()">Spectate</button>
     <button class="btn btn-imperial" onclick="showLeaderboard()">Leaderboard</button>
   </div>
+  <button class="btn btn-secondary btn-how-to-play" onclick="showHelp()">How to Play</button>
   <div id="account-area">
     <div id="account-logged-out">
       <button class="btn-link" onclick="openAuth('login')">Log in</button>
@@ -805,17 +811,8 @@ body.on-menu {
       <div style="opacity:0.35;font-size:0.7rem;">Options apply to rooms you create</div>
       <div style="opacity:0.4;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;">or enter a room code</div>
       <input class="room-input" id="join-code-input" placeholder="CODE" maxlength="4" onkeydown="if(event.key==='Enter')joinRoom()">
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-gold" style="flex:1;padding:10px;font-size:0.9rem;" onclick="joinRoom()">Join</button>
-        <button class="btn btn-secondary" style="flex:1;padding:10px;font-size:0.9rem;" onclick="spectateRoom()">Spectate</button>
-      </div>
+      <button class="btn btn-gold" style="padding:10px;font-size:0.9rem;" onclick="joinRoom()">Join</button>
       <div class="room-error" id="join-error"></div>
-      <div style="opacity:0.4;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;margin-top:6px;">or spectate a player</div>
-      <div style="position:relative;">
-        <input class="room-input" id="spectate-username-input" placeholder="Type at least 3 letters of a username…" autocomplete="off" style="text-transform:none;letter-spacing:normal;font-size:1rem;width:100%;" onkeydown="if(event.key==='Enter')spectateUserByName()" oninput="onSpectateSearchInput(this.value)">
-        <div id="spectate-search-results"></div>
-      </div>
-      <button class="btn btn-secondary" style="padding:10px;font-size:0.9rem;" onclick="spectateUserByName()">Spectate Player</button>
     </div>
     <button class="btn btn-secondary btn-sm" onclick="showFriendsModeScreen()">Back</button>
   </div>
@@ -847,6 +844,24 @@ body.on-menu {
       <div id="challenge-sent-msg" style="opacity:0.9;font-size:0.85rem;color:#81c784;display:none;"></div>
     </div>
     <button class="btn btn-secondary btn-sm" onclick="showFriendsModeScreen()">Back</button>
+  </div>
+</div>
+
+<div id="spectate-screen" class="room-screen">
+  <div class="room-box" style="max-width:480px;width:94vw;">
+    <h2>Spectate</h2>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+      <div style="opacity:0.4;font-size:0.75rem;text-transform:uppercase;letter-spacing:2px;">Ongoing games</div>
+      <div id="spectate-games-list" class="stats-history" style="max-height:240px;"></div>
+      <div style="opacity:0.4;font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;margin-top:6px;">or search for a player</div>
+      <div style="position:relative;">
+        <input class="room-input" id="spectate-username-input" placeholder="Type at least 3 letters of a username…" autocomplete="off" style="text-transform:none;letter-spacing:normal;font-size:1rem;width:100%;" onkeydown="if(event.key==='Enter')spectateUserByName()" oninput="onSpectateSearchInput(this.value)">
+        <div id="spectate-search-results"></div>
+      </div>
+      <button class="btn btn-secondary" style="padding:10px;font-size:0.9rem;" onclick="spectateUserByName()">Spectate Player</button>
+      <div class="room-error" id="spectate-error"></div>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="backToMenu()">Back</button>
   </div>
 </div>
 
@@ -1269,7 +1284,11 @@ body.on-menu {
 <div id="leaderboard-screen" class="room-screen">
   <div class="room-box" style="max-width:520px;width:94vw;">
     <h2 style="margin-bottom:4px;">Leaderboard</h2>
-    <div style="opacity:0.4;font-size:0.7rem;margin-top:6px;">Ranked by win rate — requires 15+ games played</div>
+    <div class="game-options" style="margin-top:10px;">
+      <button class="opt-toggle active" id="lb-tab-all" onclick="setLeaderboardPeriod('all')">All-Time</button>
+      <button class="opt-toggle" id="lb-tab-monthly" onclick="setLeaderboardPeriod('monthly')">This Month</button>
+    </div>
+    <div style="opacity:0.4;font-size:0.7rem;margin-top:6px;" id="lb-caption">Ranked by win rate — requires 15+ games played</div>
     <div id="lb-winrate-list" class="stats-history" style="margin-top:10px;"></div>
     <button class="btn btn-secondary btn-sm" style="margin-top:16px;" onclick="backToMenu()">Back</button>
   </div>
@@ -1545,6 +1564,8 @@ function hideAll() {
   document.getElementById("room-screen").style.display = "none";
   document.getElementById("challenge-screen").classList.remove("visible");
   document.getElementById("challenge-screen").style.display = "none";
+  document.getElementById("spectate-screen").classList.remove("visible");
+  document.getElementById("spectate-screen").style.display = "none";
   document.getElementById("challenge-dropdown").style.display = "none";
   document.getElementById("waiting").classList.remove("visible");
   document.getElementById("waiting").style.display = "none";
@@ -1914,33 +1935,50 @@ async function loadAdminGames() {
   }).join("");
 }
 
+let leaderboardPeriod = "all";
+
 async function showLeaderboard() {
   hideAll();
   clearBodyBg();
   const el = document.getElementById("leaderboard-screen");
   el.style.display = "flex";
   el.classList.add("visible");
+  leaderboardPeriod = "all";
+  document.getElementById("lb-tab-all").classList.add("active");
+  document.getElementById("lb-tab-monthly").classList.remove("active");
   await loadLeaderboard();
+}
+
+function setLeaderboardPeriod(period) {
+  leaderboardPeriod = period;
+  document.getElementById("lb-tab-all").classList.toggle("active", period === "all");
+  document.getElementById("lb-tab-monthly").classList.toggle("active", period === "monthly");
+  loadLeaderboard();
 }
 
 async function loadLeaderboard() {
   const list = document.getElementById("lb-winrate-list");
+  const monthly = leaderboardPeriod === "monthly";
+  document.getElementById("lb-caption").textContent = monthly
+    ? "Ranked by win rate — requires 10+ games played this month"
+    : "Ranked by win rate — requires 15+ games played";
   list.innerHTML = '<div class="hist-empty">Loading…</div>';
   let players = [];
   try {
-    const r = await fetch("/api/leaderboard");
+    const r = await fetch("/api/leaderboard" + (monthly ? "?period=monthly" : ""));
     players = (await r.json()).players || [];
   } catch (e) {
     list.innerHTML = '<div class="hist-empty">Could not load.</div>';
     return;
   }
+  const emptyMsg = monthly ? "No players with 10+ games this month yet." : "No players with 15+ games yet.";
   list.innerHTML = players.length ? players.map((p, i) => `
     <div class="hist-row">
       <div class="hist-head">
         <span>#${i + 1} ${p.display_name}</span>
         <span class="hist-result">${p.winrate}% <span style="opacity:0.6;font-weight:400;">(${p.wins}-${p.losses}${p.ties ? "-" + p.ties : ""})</span></span>
       </div>
-    </div>`).join("") : '<div class="hist-empty">No players with 15+ games yet.</div>';
+    </div>`).join("") : `<div class="hist-empty">${emptyMsg}</div>`;
 }
 
 function loadStatsView(value) {
@@ -2223,10 +2261,44 @@ function hideSpectateSearchResults() {
 function spectateUserByName() {
   const input = document.getElementById("spectate-username-input");
   const username = input.value.trim();
-  document.getElementById("join-error").textContent = "";
-  if (!username) { document.getElementById("join-error").textContent = "Enter a username."; return; }
+  document.getElementById("spectate-error").textContent = "";
+  if (!username) { document.getElementById("spectate-error").textContent = "Enter a username."; return; }
   hideSpectateSearchResults();
   socket.emit("spectate_user", {username});
+}
+
+function showSpectateScreen() {
+  hideAll();
+  clearBodyBg();
+  const el = document.getElementById("spectate-screen");
+  el.style.display = "flex";
+  el.classList.add("visible");
+  document.getElementById("spectate-error").textContent = "";
+  document.getElementById("spectate-username-input").value = "";
+  hideSpectateSearchResults();
+  loadOngoingGames();
+}
+
+async function loadOngoingGames() {
+  const list = document.getElementById("spectate-games-list");
+  list.innerHTML = '<div class="hist-empty">Loading…</div>';
+  let games = [];
+  try {
+    const r = await fetch("/api/ongoing_games");
+    games = (await r.json()).games || [];
+  } catch (e) {
+    list.innerHTML = '<div class="hist-empty">Could not load.</div>';
+    return;
+  }
+  list.innerHTML = games.length ? games.map(g => `
+    <div class="hist-row search-result-row" style="cursor:pointer;" onclick="spectateGame('${g.game_id}')">
+      <span>${g.p1_name} vs ${g.p2_name}</span>
+    </div>`).join("") : '<div class="hist-empty">No games in progress right now.</div>';
+}
+
+function spectateGame(gameId) {
+  document.getElementById("spectate-error").textContent = "";
+  socket.emit("spectate_game", {game_id: gameId});
 }
 
 function showRoomScreen() {
@@ -2237,8 +2309,6 @@ function showRoomScreen() {
   el.classList.add("visible");
   document.getElementById("join-error").textContent = "";
   document.getElementById("join-code-input").value = "";
-  document.getElementById("spectate-username-input").value = "";
-  hideSpectateSearchResults();
   // Seed the "Reveal Attacked" option from the logged-in user's saved default.
   gameOptions.reveal_attacked = !!(currentUser && currentUser.reveal_attacked_default);
   document.getElementById("opt-reveal-attacked")
@@ -2291,13 +2361,6 @@ function joinRoom() {
   socket.emit("join_room_code", {code});
 }
 
-function spectateRoom() {
-  const code = document.getElementById("join-code-input").value.trim();
-  if (!code) { document.getElementById("join-error").textContent = "Enter a room code"; return; }
-  document.getElementById("join-error").textContent = "";
-  socket.emit("spectate_room", {code});
-}
-
 socket.on("room_created", (data) => {
   hideAll();
   clearBodyBg();
@@ -2309,6 +2372,10 @@ socket.on("room_created", (data) => {
 
 socket.on("join_error", (data) => {
   document.getElementById("join-error").textContent = data.msg;
+});
+
+socket.on("spectate_error", (data) => {
+  document.getElementById("spectate-error").textContent = data.msg;
 });
 
 function startBot() {

@@ -129,15 +129,18 @@ def record_game(p1_user_id, p2_user_id, p1_name, p2_name, p1_score, p2_score, vs
     db.session.commit()
 
 
-def _records_for(user_id):
-    return GameRecord.query.filter(
+def _records_for(user_id, since=None):
+    q = GameRecord.query.filter(
         (GameRecord.p1_user_id == user_id) | (GameRecord.p2_user_id == user_id)
-    ).order_by(GameRecord.finished_at.desc())
+    )
+    if since is not None:
+        q = q.filter(GameRecord.finished_at >= since)
+    return q.order_by(GameRecord.finished_at.desc())
 
 
-def user_stats(user_id):
+def user_stats(user_id, since=None):
     wins = losses = ties = 0
-    for r in _records_for(user_id).all():
+    for r in _records_for(user_id, since=since).all():
         is_p1 = r.p1_user_id == user_id
         mine = r.p1_score if is_p1 else r.p2_score
         theirs = r.p2_score if is_p1 else r.p1_score
@@ -151,12 +154,13 @@ def user_stats(user_id):
     return {"wins": wins, "losses": losses, "ties": ties, "total": total}
 
 
-def leaderboard(min_games=15, limit=50):
+def leaderboard(min_games=15, limit=50, since=None):
     """Players ranked by win rate, highest first. Requires min_games played
-    to filter out small-sample-size records (e.g. a 1-0 record ranking #1)."""
+    to filter out small-sample-size records (e.g. a 1-0 record ranking #1).
+    Pass `since` to restrict to games finished on/after that datetime (monthly board)."""
     rows = []
     for u in User.query.all():
-        stats = user_stats(u.id)
+        stats = user_stats(u.id, since=since)
         if stats["total"] < min_games:
             continue
         winrate = (stats["wins"] + 0.5 * stats["ties"]) / stats["total"] * 100
