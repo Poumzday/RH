@@ -256,10 +256,10 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
 
 /* --- Mobile: shrink cards & board so they fit small screens --- */
 @media (max-width: 600px) {
-  .card { width: 40px; height: 57px; border-radius: 6px; }
-  .card .rank { font-size: 1rem !important; }
-  .card .card-icon { font-size: 1.1rem !important; }
-  .card .royal-icon { font-size: 1.15rem !important; }
+  .card { width: 35px; height: 50px; border-radius: 5px; }
+  .card .rank { font-size: 0.9rem !important; }
+  .card .card-icon { font-size: 1rem !important; }
+  .card .royal-icon { font-size: 1.05rem !important; }
   .card .royal-rank { font-size: 0.46rem !important; }
   .card .royal-title { display: none; }
   .card .ace-label { display: none; }
@@ -267,27 +267,28 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
   .card .joker-label { display: none; }
   .card .corner { font-size: 0.36rem !important; }
 
-  .sm-card { width: 38px !important; height: 55px !important; }
-  .sm-card .rank { font-size: 0.85rem !important; }
-  .sm-card .royal-icon { font-size: 1rem !important; }
+  .sm-card { width: 34px !important; height: 49px !important; }
+  .sm-card .rank { font-size: 0.78rem !important; }
+  .sm-card .royal-icon { font-size: 0.92rem !important; }
 
   /* tight board so ~7 cards fit per row (!important to beat later base rules) */
-  .board-row { gap: 3px !important; padding: 4px !important; min-height: 72px; }
+  .board-row { gap: 3px !important; padding: 4px !important; min-height: 64px; }
+  .hand-row { gap: 3px !important; }
   .board-row.board-wide { min-width: 0 !important; width: 100% !important; left: 0 !important; transform: none !important; }
   .unit-group { margin: 0 2px !important; }
-  /* keep the desktop stacking proportion (~44% overlap), scaled to 40px cards */
-  .unit-group .card { margin-left: -18px !important; }
+  /* keep the desktop stacking proportion (~44% overlap), scaled to 35px cards */
+  .unit-group .card { margin-left: -16px !important; }
   .unit-group .card:first-child { margin-left: 0 !important; }
   #your-board, #opp-board { gap: 3px !important; }
 }
 
 @media (max-width: 400px) {
-  .card { width: 34px; height: 49px; }
-  .card .rank { font-size: 0.85rem !important; }
-  .card .royal-icon { font-size: 0.95rem !important; }
-  .sm-card { width: 30px !important; height: 43px !important; }
+  .card { width: 31px; height: 45px; }
+  .card .rank { font-size: 0.8rem !important; }
+  .card .royal-icon { font-size: 0.88rem !important; }
+  .sm-card { width: 28px !important; height: 40px !important; }
   .unit-group { margin: 0 1px !important; }
-  .unit-group .card { margin-left: -15px !important; }
+  .unit-group .card { margin-left: -14px !important; }
   #your-board, #opp-board { gap: 2px !important; }
 }
 
@@ -612,24 +613,33 @@ body.on-menu {
 #emote-btn:hover { transform:scale(1.08); border-color:#ffd700; }
 #emote-btn:active { transform:scale(0.94); }
 #emote-btn.cooling { opacity:0.45; }
-#emote-menu { display:none; flex-direction:column; gap:8px; padding:8px; border-radius:18px; background:rgba(15,40,20,0.92); border:1px solid rgba(255,255,255,0.18); box-shadow:0 8px 24px rgba(0,0,0,0.5); animation:emoteMenuIn 0.16s ease-out; transform-origin:bottom left; }
-#emote-menu.open { display:flex; }
+#emote-menu { display:none; grid-template-columns:1fr 1fr; gap:8px; padding:8px; border-radius:18px; background:rgba(15,40,20,0.92); border:1px solid rgba(255,255,255,0.18); box-shadow:0 8px 24px rgba(0,0,0,0.5); animation:emoteMenuIn 0.16s ease-out; transform-origin:bottom left; }
+#emote-menu.open { display:grid; }
 @keyframes emoteMenuIn { from { opacity:0; transform:scale(0.7) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
 .emote-opt { border:none; border-radius:14px; padding:6px 14px; min-width:74px; background:rgba(255,255,255,0.1); color:#fff; font-family:inherit; cursor:pointer; transition:background 0.15s, transform 0.12s; }
 .emote-opt:hover { background:rgba(255,255,255,0.22); transform:translateX(3px); }
 .emote-opt.emoji { font-size:1.6rem; line-height:1.2; }
-.emote-opt.text { font-size:0.85rem; font-weight:900; letter-spacing:2px; color:#ffd54f; }
+.emote-opt.text { font-size:0.8rem; font-weight:900; letter-spacing:1.5px; color:#fff; display:flex; align-items:center; justify-content:center; }
+.emote-opt.thanks { color:#a5d6a7; }
+.emote-opt.toast { color:#ffcc80; }
+.emote-opt.sketch { grid-column:1 / -1; background:linear-gradient(135deg,#b71c1c,#e53935); color:#fff176; font-family:Impact,'Arial Black',sans-serif; font-size:1rem; letter-spacing:3px; font-style:italic; }
+.emote-opt.sketch:hover { background:linear-gradient(135deg,#c62828,#ff5252); }
 .emote-bubble { position:absolute; left:50%; z-index:60; pointer-events:none; padding:8px 16px; border-radius:22px; background:#fff; color:#222; box-shadow:0 6px 18px rgba(0,0,0,0.45); animation:emoteBubble 2.8s ease-out forwards; }
 .emote-bubble::after { content:""; position:absolute; left:50%; width:14px; height:14px; background:inherit; border-radius:2px; transform:translateX(-50%) rotate(45deg); }
 .emote-bubble.from-you { bottom:100%; margin-bottom:8px; }
 .emote-bubble.from-you::after { bottom:-6px; }
 .emote-bubble.from-opp { top:100%; margin-top:8px; }
 .emote-bubble.from-opp::after { top:-6px; }
-.emote-bubble.laugh, .emote-bubble.angry { font-size:2.4rem; line-height:1.1; padding:6px 16px; }
+.emote-bubble.laugh, .emote-bubble.angry, .emote-bubble.think { font-size:2.4rem; line-height:1.1; padding:6px 16px; }
 .emote-bubble.angry { background:#ffebee; box-shadow:0 6px 18px rgba(198,40,40,0.55); animation-name:emoteBubble, emoteShake; animation-duration:2.8s, 0.4s; animation-iteration-count:1, 4; animation-fill-mode:forwards, none; }
 .emote-bubble.laugh { background:#fff8e1; }
-.emote-bubble.sketch { font-size:1.15rem; font-weight:900; letter-spacing:3px; font-style:italic; color:#ffd54f; background:#1c1c1c; border:2px dashed #ffd54f; box-shadow:0 6px 18px rgba(0,0,0,0.6); }
+.emote-bubble.think { background:#e3f2fd; }
+.emote-bubble.thanks { font-size:1.2rem; font-weight:800; letter-spacing:1px; color:#1b5e20; background:linear-gradient(135deg,#f1f8e9,#c8e6c9); border:2px solid #66bb6a; }
+.emote-bubble.toast { font-size:1.35rem; font-weight:900; letter-spacing:3px; color:#4e2a00; background:linear-gradient(135deg,#ffe082,#ffb300); border:2px solid #ff8f00; box-shadow:0 6px 18px rgba(255,143,0,0.5); }
+.emote-bubble.sketch { font-family:Impact,'Arial Black',sans-serif; font-size:2.3rem; font-weight:900; letter-spacing:5px; font-style:italic; line-height:1; padding:10px 24px; color:#fff176; background:linear-gradient(135deg,#7f0000,#d50000); border:3px solid #fff176; border-radius:10px; text-shadow:2px 2px 0 #000, 0 0 14px rgba(255,241,118,0.85); box-shadow:0 0 0 3px #000, 0 0 28px rgba(255,23,68,0.85), 0 8px 22px rgba(0,0,0,0.7); animation:emoteSlam 3.2s ease-out forwards; }
+.emote-bubble.sketch::after { display:none; }
 @keyframes emoteBubble { 0% { opacity:0; transform:translateX(-50%) scale(0.3); } 12% { opacity:1; transform:translateX(-50%) scale(1.15); } 20% { transform:translateX(-50%) scale(1); } 80% { opacity:1; } 100% { opacity:0; transform:translateX(-50%) translateY(-14px) scale(1); } }
+@keyframes emoteSlam { 0% { opacity:0; transform:translateX(-50%) rotate(-6deg) scale(3); } 10% { opacity:1; transform:translateX(-50%) rotate(-6deg) scale(0.9); } 14% { transform:translateX(calc(-50% - 7px)) rotate(-7deg) scale(1.08); } 18% { transform:translateX(calc(-50% + 7px)) rotate(-5deg) scale(1); } 22% { transform:translateX(calc(-50% - 4px)) rotate(-6deg) scale(1.04); } 26% { transform:translateX(-50%) rotate(-6deg) scale(1); } 85% { opacity:1; transform:translateX(-50%) rotate(-6deg) scale(1); } 100% { opacity:0; transform:translateX(-50%) rotate(-6deg) translateY(-14px) scale(1); } }
 @keyframes emoteShake { 0%,100% { margin-left:0; } 25% { margin-left:-6px; } 75% { margin-left:6px; } }
 
 /* In-game help button */
@@ -1225,7 +1235,10 @@ body.on-menu {
   <div id="emote-menu">
     <button class="emote-opt emoji" onclick="sendEmote('laugh')" aria-label="Laugh">😂</button>
     <button class="emote-opt emoji" onclick="sendEmote('angry')" aria-label="Angry">😡</button>
-    <button class="emote-opt text" onclick="sendEmote('sketch')">SKETCH</button>
+    <button class="emote-opt emoji" onclick="sendEmote('think')" aria-label="Thinking">🤔</button>
+    <button class="emote-opt text thanks" onclick="sendEmote('thanks')">Thank you</button>
+    <button class="emote-opt text toast" onclick="sendEmote('toast')">TOAST</button>
+    <button class="emote-opt text sketch" onclick="sendEmote('sketch')">SKETCH</button>
   </div>
   <button id="emote-btn" onclick="toggleEmoteMenu()" aria-label="Emotes">💬</button>
 </div>
@@ -3493,7 +3506,7 @@ function doMulligan(yes) {
 }
 
 // --- Emotes ---
-const EMOTE_CONTENT = { laugh: "😂", angry: "😡", sketch: "SKETCH" };
+const EMOTE_CONTENT = { laugh: "😂", angry: "😡", think: "🤔", thanks: "Thank you", toast: "TOAST", sketch: "SKETCH" };
 let emoteCooling = false;
 
 function toggleEmoteMenu(force) {

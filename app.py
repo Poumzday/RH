@@ -1573,7 +1573,7 @@ def on_join_bot():
     broadcast_state(game)
 
 
-EMOTES = {"laugh", "angry", "sketch"}
+EMOTES = {"laugh", "angry", "think", "thanks", "toast", "sketch"}
 EMOTE_COOLDOWN_SECONDS = 1.5
 last_emote_at = {}  # sid -> monotonic time of that player's last emote
 
