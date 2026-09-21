@@ -1,6 +1,7 @@
 import os
 import json
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, text
@@ -8,6 +9,20 @@ from sqlalchemy.pool import NullPool
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
+
+EASTERN = ZoneInfo("America/New_York")
+
+
+def month_start_utc():
+    """Start of the current calendar month in US Eastern time, as a naive UTC
+    datetime (matching how finished_at is stored)."""
+    now = datetime.now(EASTERN)
+    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    return start.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def month_label():
+    return datetime.now(EASTERN).strftime("%B")
 
 
 def init_db(app):
@@ -173,12 +188,16 @@ def leaderboard(min_games=15, limit=50, since=None):
     return rows[:limit]
 
 
-def head_to_head(user_id, opp_id):
-    """My (user_id) record and games against a specific opponent, from my perspective."""
-    games = GameRecord.query.filter(
+def head_to_head(user_id, opp_id, since=None):
+    """My (user_id) record and games against a specific opponent, from my perspective.
+    Pass `since` to restrict to games finished on/after that datetime."""
+    q = GameRecord.query.filter(
         ((GameRecord.p1_user_id == user_id) & (GameRecord.p2_user_id == opp_id)) |
         ((GameRecord.p1_user_id == opp_id) & (GameRecord.p2_user_id == user_id))
-    ).order_by(GameRecord.finished_at.desc()).all()
+    )
+    if since is not None:
+        q = q.filter(GameRecord.finished_at >= since)
+    games = q.order_by(GameRecord.finished_at.desc()).all()
     wins = losses = ties = 0
     history = []
     for r in games:
@@ -283,9 +302,9 @@ def recent_games(limit=5):
     return out
 
 
-def user_history(user_id, limit=10):
+def user_history(user_id, limit=10, since=None):
     out = []
-    for r in _records_for(user_id).limit(limit).all():
+    for r in _records_for(user_id, since=since).limit(limit).all():
         is_p1 = r.p1_user_id == user_id
         boards = json.loads(r.boards_json)
         out.append({

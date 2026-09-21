@@ -12,6 +12,7 @@ import random
 import time
 import uuid
 import threading
+import time
 from datetime import timedelta, datetime, timezone
 from flask import Flask, render_template, request, session, jsonify
 from flask_socketio import SocketIO, emit, join_room
@@ -1306,12 +1307,15 @@ def api_headtohead():
         username=request.args.get("opponent", "").strip().lower()).first()
     if not opp:
         return jsonify({"error": "Player not found."}), 404
-    stats, history = models.head_to_head(me.id, opp.id)
+    monthly = request.args.get("period") == "monthly"
+    stats, history = models.head_to_head(
+        me.id, opp.id, since=models.month_start_utc() if monthly else None)
     return jsonify({
         "me": _user_json(me),
         "opponent": _user_json(opp),
         "stats": stats,
         "history": history,
+        "month_label": models.month_label(),
     })
 
 
@@ -1320,19 +1324,19 @@ def api_overall():
     me = _current_user()
     if not me:
         return jsonify({"error": "Not logged in."}), 401
+    since = models.month_start_utc() if request.args.get("period") == "monthly" else None
     return jsonify({
         "user": _user_json(me),
-        "stats": models.user_stats(me.id),
-        "history": models.user_history(me.id, limit=10),
+        "stats": models.user_stats(me.id, since=since),
+        "history": models.user_history(me.id, limit=10, since=since),
+        "month_label": models.month_label(),
     })
 
 
 @app.route("/api/leaderboard")
 def api_leaderboard():
     if request.args.get("period") == "monthly":
-        now = datetime.now(timezone.utc)
-        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        return jsonify({"players": models.leaderboard(min_games=10, since=month_start)})
+        return jsonify({"players": models.leaderboard(min_games=10, since=models.month_start_utc())})
     return jsonify({"players": models.leaderboard(min_games=15)})
 
 
@@ -1569,6 +1573,35 @@ def on_join_bot():
     broadcast_state(game)
 
 
+EMOTES = {"laugh", "angry", "sketch"}
+EMOTE_COOLDOWN_SECONDS = 1.5
+last_emote_at = {}  # sid -> monotonic time of that player's last emote
+
+
+@socketio.on("emote")
+def on_emote(data):
+    """A player sends a quick reaction; everyone in the game (both players and
+    spectators) sees it as a bubble on that player's side of the table."""
+    sid = request.sid
+    game = games.get(player_game.get(sid))
+    kind = (data or {}).get("type")
+    if not game or sid not in game.players or kind not in EMOTES:
+        return
+    if len(game.players) != 2 or game.phase == "game_over":
+        return
+    now = time.monotonic()
+    if now - last_emote_at.get(sid, 0) < EMOTE_COOLDOWN_SECONDS:
+        return
+    last_emote_at[sid] = now
+    slot = game.players.index(sid)
+    for p in game.players:
+        if p != BOT_SID:
+            socketio.emit("emote", {"type": kind, "side": "you" if p == sid else "opp"}, to=p)
+    # Spectators see player 1 at the bottom and player 2 at the top.
+    for sp in game.spectators:
+        socketio.emit("emote", {"type": kind, "side": "you" if slot == 0 else "opp"}, to=sp)
+
+
 @socketio.on("mulligan")
 def on_mulligan(data):
     sid = request.sid
@@ -1701,6 +1734,7 @@ def on_disconnect():
         user_to_sid.pop(uid, None)
     sid_to_user.pop(sid, None)
     sid_to_name.pop(sid, None)
+    last_emote_at.pop(sid, None)
     game_id = player_game.pop(sid, None)
     if not game_id or game_id not in games:
         return

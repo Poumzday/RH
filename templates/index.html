@@ -604,6 +604,34 @@ body.on-menu {
 }
 .demo-play-btn:hover { background: #f57f17; }
 
+
+/* --- Emotes --- */
+#emote-wrap { position:fixed; left:14px; bottom:14px; z-index:90; display:none; flex-direction:column-reverse; align-items:flex-start; gap:10px; }
+#emote-wrap.visible { display:flex; }
+#emote-btn { width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,215,0,0.55); background:radial-gradient(circle at 30% 25%, rgba(255,255,255,0.28), rgba(0,0,0,0.5)); color:#fff; font-size:1.35rem; line-height:1; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.45); transition:transform 0.15s, border-color 0.15s; }
+#emote-btn:hover { transform:scale(1.08); border-color:#ffd700; }
+#emote-btn:active { transform:scale(0.94); }
+#emote-btn.cooling { opacity:0.45; }
+#emote-menu { display:none; flex-direction:column; gap:8px; padding:8px; border-radius:18px; background:rgba(15,40,20,0.92); border:1px solid rgba(255,255,255,0.18); box-shadow:0 8px 24px rgba(0,0,0,0.5); animation:emoteMenuIn 0.16s ease-out; transform-origin:bottom left; }
+#emote-menu.open { display:flex; }
+@keyframes emoteMenuIn { from { opacity:0; transform:scale(0.7) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
+.emote-opt { border:none; border-radius:14px; padding:6px 14px; min-width:74px; background:rgba(255,255,255,0.1); color:#fff; font-family:inherit; cursor:pointer; transition:background 0.15s, transform 0.12s; }
+.emote-opt:hover { background:rgba(255,255,255,0.22); transform:translateX(3px); }
+.emote-opt.emoji { font-size:1.6rem; line-height:1.2; }
+.emote-opt.text { font-size:0.85rem; font-weight:900; letter-spacing:2px; color:#ffd54f; }
+.emote-bubble { position:absolute; left:50%; z-index:60; pointer-events:none; padding:8px 16px; border-radius:22px; background:#fff; color:#222; box-shadow:0 6px 18px rgba(0,0,0,0.45); animation:emoteBubble 2.8s ease-out forwards; }
+.emote-bubble::after { content:""; position:absolute; left:50%; width:14px; height:14px; background:inherit; border-radius:2px; transform:translateX(-50%) rotate(45deg); }
+.emote-bubble.from-you { bottom:100%; margin-bottom:8px; }
+.emote-bubble.from-you::after { bottom:-6px; }
+.emote-bubble.from-opp { top:100%; margin-top:8px; }
+.emote-bubble.from-opp::after { top:-6px; }
+.emote-bubble.laugh, .emote-bubble.angry { font-size:2.4rem; line-height:1.1; padding:6px 16px; }
+.emote-bubble.angry { background:#ffebee; box-shadow:0 6px 18px rgba(198,40,40,0.55); animation-name:emoteBubble, emoteShake; animation-duration:2.8s, 0.4s; animation-iteration-count:1, 4; animation-fill-mode:forwards, none; }
+.emote-bubble.laugh { background:#fff8e1; }
+.emote-bubble.sketch { font-size:1.15rem; font-weight:900; letter-spacing:3px; font-style:italic; color:#ffd54f; background:#1c1c1c; border:2px dashed #ffd54f; box-shadow:0 6px 18px rgba(0,0,0,0.6); }
+@keyframes emoteBubble { 0% { opacity:0; transform:translateX(-50%) scale(0.3); } 12% { opacity:1; transform:translateX(-50%) scale(1.15); } 20% { transform:translateX(-50%) scale(1); } 80% { opacity:1; } 100% { opacity:0; transform:translateX(-50%) translateY(-14px) scale(1); } }
+@keyframes emoteShake { 0%,100% { margin-left:0; } 25% { margin-left:-6px; } 75% { margin-left:6px; } }
+
 /* In-game help button */
 #ingame-help { position:fixed; top:12px; right:12px; z-index:100; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:50%; width:36px; height:36px; font-size:1.1rem; font-weight:bold; cursor:pointer; display:none; }
 #ingame-help:hover { background:rgba(0,0,0,0.6); }
@@ -727,6 +755,9 @@ body.on-menu {
 .stat-pill { text-align:center; background:rgba(0,0,0,0.25); border-radius:10px; padding:8px 16px; min-width:64px; }
 .stat-pill .num { font-size:1.5rem; font-weight:900; }
 .stat-pill .lbl { font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; opacity:0.6; }
+.stats-period { display:flex; justify-content:center; gap:6px; margin:4px 0 8px; }
+.stats-period button { background:rgba(0,0,0,0.3); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:14px; padding:4px 14px; font-size:0.78rem; font-family:inherit; cursor:pointer; opacity:0.7; }
+.stats-period button.active { opacity:1; border-color:#ffd700; color:#ffd700; }
 .stats-history { max-height:46vh; overflow-y:auto; text-align:left; }
 .hist-row { background:rgba(0,0,0,0.2); border-radius:8px; padding:8px 12px; margin-bottom:6px; }
 .hist-head { display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; }
@@ -1189,6 +1220,16 @@ body.on-menu {
   <div id="event-log"></div>
 </div>
 
+<!-- Emotes (players only) -->
+<div id="emote-wrap">
+  <div id="emote-menu">
+    <button class="emote-opt emoji" onclick="sendEmote('laugh')" aria-label="Laugh">😂</button>
+    <button class="emote-opt emoji" onclick="sendEmote('angry')" aria-label="Angry">😡</button>
+    <button class="emote-opt text" onclick="sendEmote('sketch')">SKETCH</button>
+  </div>
+  <button id="emote-btn" onclick="toggleEmoteMenu()" aria-label="Emotes">💬</button>
+</div>
+
 <!-- Mulligan overlay -->
 <div id="mulligan-overlay">
   <div id="mulligan-box">
@@ -1260,6 +1301,10 @@ body.on-menu {
       <select id="stats-player-select" onchange="loadStatsView(this.value)"></select>
     </div>
     <h2 style="margin-bottom:4px;">♛ <span id="stats-name"></span></h2>
+    <div class="stats-period">
+      <button id="stats-period-all" class="active" onclick="setStatsPeriod('all')">All time</button>
+      <button id="stats-period-month" onclick="setStatsPeriod('monthly')">This month</button>
+    </div>
     <div id="stats-winrate"></div>
     <div id="stats-summary" class="stats-summary"></div>
     <h3 style="margin:14px 0 6px;opacity:0.7;font-size:0.9rem;letter-spacing:1px;text-transform:uppercase;">Recent games</h3>
@@ -1844,6 +1889,9 @@ async function showStats() {
   const screen = document.getElementById("stats-screen");
   screen.style.display = "flex";
   screen.classList.add("visible");
+  statsPeriod = "all";
+  document.getElementById("stats-period-all").classList.add("active");
+  document.getElementById("stats-period-month").classList.remove("active");
   document.getElementById("stats-name").textContent = "";
   document.getElementById("stats-winrate").innerHTML = "";
   document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Loading…</span>';
@@ -1981,6 +2029,16 @@ async function loadLeaderboard() {
     </div>`).join("") : `<div class="hist-empty">${emptyMsg}</div>`;
 }
 
+let statsPeriod = "all";
+let statsMonthLabel = "";
+
+function setStatsPeriod(period) {
+  statsPeriod = period;
+  document.getElementById("stats-period-all").classList.toggle("active", period === "all");
+  document.getElementById("stats-period-month").classList.toggle("active", period === "monthly");
+  loadStatsView(document.getElementById("stats-player-select").value);
+}
+
 function loadStatsView(value) {
   if (value === "__overall__" || !value) loadOverall();
   else loadHeadToHead(value);
@@ -1997,9 +2055,17 @@ function winRateColor(rate) {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
+// Monthly view: net wins minus losses (ties ignored), colored by size of the gap.
+// 0 -> yellow, +10 or more -> full green, -10 or less -> full red.
 function renderSummary(s) {
   const wEl = document.getElementById("stats-winrate");
-  if (s.total > 0) {
+  if (statsPeriod === "monthly") {
+    const diff = s.wins - s.losses;
+    const shade = 50 + Math.max(-10, Math.min(10, diff)) * 5;
+    const text = s.total === 0 ? "—" : (diff > 0 ? "+" + diff : diff < 0 ? "−" + Math.abs(diff) : "±0");
+    const color = s.total === 0 ? "" : `color:${winRateColor(shade)}`;
+    wEl.innerHTML = `<div class="winrate-big" style="${color};${s.total === 0 ? "opacity:0.35" : ""}">${text}</div><div class="winrate-label">${statsMonthLabel || "This month"}</div>`;
+  } else if (s.total > 0) {
     const rate = (s.wins + 0.5 * s.ties) / s.total * 100;
     wEl.innerHTML = `<div class="winrate-big" style="color:${winRateColor(rate)}">${Math.round(rate)}%</div><div class="winrate-label">Win rate</div>`;
   } else {
@@ -2047,15 +2113,16 @@ async function loadOverall() {
   document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Loading…</span>';
   document.getElementById("stats-history").innerHTML = "";
   try {
-    const r = await fetch("/api/overall");
+    const r = await fetch("/api/overall" + (statsPeriod === "monthly" ? "?period=monthly" : ""));
     const d = await r.json();
     if (!r.ok) { document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Could not load stats.</span>'; return; }
     document.getElementById("stats-name").textContent = "Overall";
+    statsMonthLabel = d.month_label || "";
     renderSummary(d.stats);
     const hist = d.history || [];
     document.getElementById("stats-history").innerHTML = hist.length
       ? renderHistory(hist, null)
-      : '<div class="hist-empty">No games yet — play one!</div>';
+      : `<div class="hist-empty">${statsPeriod === "monthly" ? "No games this month yet." : "No games yet — play one!"}</div>`;
   } catch (e) {
     document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Network error.</span>';
   }
@@ -2083,16 +2150,17 @@ async function loadHeadToHead(username) {
   document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Loading…</span>';
   document.getElementById("stats-history").innerHTML = "";
   try {
-    const r = await fetch("/api/headtohead?opponent=" + encodeURIComponent(username));
+    const r = await fetch("/api/headtohead?opponent=" + encodeURIComponent(username) + (statsPeriod === "monthly" ? "&period=monthly" : ""));
     const d = await r.json();
     if (!r.ok) { document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Could not load stats.</span>'; return; }
     const oppName = d.opponent.display_name;
     document.getElementById("stats-name").textContent = "vs " + oppName;
+    statsMonthLabel = d.month_label || "";
     renderSummary(d.stats);
     const hist = d.history || [];
     document.getElementById("stats-history").innerHTML = hist.length
       ? renderHistory(hist, oppName)
-      : `<div class="hist-empty">No games against ${oppName} yet.</div>`;
+      : `<div class="hist-empty">No games against ${oppName} ${statsPeriod === "monthly" ? "this month" : "yet"}.</div>`;
   } catch (e) {
     document.getElementById("stats-summary").innerHTML = '<span style="opacity:0.5;">Network error.</span>';
   }
@@ -3424,10 +3492,48 @@ function doMulligan(yes) {
   document.getElementById("mulligan-wait").style.display = "block";
 }
 
+// --- Emotes ---
+const EMOTE_CONTENT = { laugh: "😂", angry: "😡", sketch: "SKETCH" };
+let emoteCooling = false;
+
+function toggleEmoteMenu(force) {
+  const menu = document.getElementById("emote-menu");
+  menu.classList.toggle("open", force === undefined ? !menu.classList.contains("open") : force);
+}
+
+function sendEmote(type) {
+  toggleEmoteMenu(false);
+  if (emoteCooling) return;
+  emoteCooling = true;
+  const btn = document.getElementById("emote-btn");
+  btn.classList.add("cooling");
+  setTimeout(() => { emoteCooling = false; btn.classList.remove("cooling"); }, 1500);
+  socket.emit("emote", {type});
+}
+
+socket.on("emote", (e) => {
+  if (!EMOTE_CONTENT[e.type]) return;
+  const row = document.getElementById(e.side === "you" ? "your-board-row" : "opp-board-row");
+  if (!row) return;
+  row.querySelectorAll(".emote-bubble").forEach(b => b.remove());
+  const bubble = document.createElement("div");
+  bubble.className = `emote-bubble ${e.type} from-${e.side}`;
+  bubble.textContent = EMOTE_CONTENT[e.type];
+  row.appendChild(bubble);
+  setTimeout(() => bubble.remove(), 2900);
+});
+
+// Close the emote menu when tapping elsewhere.
+document.addEventListener("click", (ev) => {
+  if (!ev.target.closest("#emote-wrap")) toggleEmoteMenu(false);
+});
+
 // --- Main render ---
 function render() {
   if (!state) return;
   const isSpec = state.is_spectator;
+  document.getElementById("emote-wrap").classList.toggle(
+    "visible", !isSpec && !["waiting", "mulligan", "game_over"].includes(state.phase));
   const t = document.getElementById("turn-text");
   if (state.phase === "game_over") { t.textContent = "Game Over"; t.style.color = "#fff"; }
   else if (isSpec) {
