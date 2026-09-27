@@ -681,7 +681,7 @@ body.on-menu {
 .challenge-row:last-child { margin-bottom:0; }
 
 /* Direct-challenge player search */
-#challenge-search-results, #spectate-search-results { display:none; position:absolute; top:100%; left:0; right:0; margin-top:4px; max-height:220px; overflow-y:auto; background:#1b3a24; border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:6px; z-index:15; box-shadow:0 8px 24px rgba(0,0,0,0.5); text-align:left; }
+#challenge-search-results, #spectate-search-results, #log-p1-results, #log-p2-results { display:none; position:absolute; top:100%; left:0; right:0; margin-top:4px; max-height:220px; overflow-y:auto; background:#1b3a24; border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:6px; z-index:15; box-shadow:0 8px 24px rgba(0,0,0,0.5); text-align:left; }
 .search-result-row { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-radius:6px; cursor:pointer; font-size:0.85rem; }
 .search-result-row:hover { background:rgba(255,255,255,0.1); }
 .search-result-row .srr-games { opacity:0.55; font-size:0.75rem; }
@@ -1362,12 +1362,33 @@ body.on-menu {
 <div id="admin-screen" class="room-screen">
   <div class="room-box" style="max-width:520px;width:94vw;">
     <h2 style="margin-bottom:4px;">Admin</h2>
-    <div style="display:flex;gap:8px;margin-top:10px;">
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
       <button class="opt-toggle active" id="admin-tab-players" onclick="showAdminTab('players')">Players</button>
       <button class="opt-toggle" id="admin-tab-games" onclick="showAdminTab('games')">Recent Games</button>
+      <button class="opt-toggle" id="admin-tab-log" onclick="showAdminTab('log')">Log Game</button>
     </div>
     <div id="admin-list" class="stats-history" style="margin-top:10px;"></div>
     <div id="admin-games-list" class="stats-history" style="margin-top:10px;display:none;"></div>
+    <div id="admin-log-panel" style="margin-top:14px;display:none;text-align:left;">
+      <div style="opacity:0.6;font-size:0.72rem;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Player 1</div>
+      <div style="position:relative;">
+        <input class="room-input" id="log-p1-input" placeholder="Type at least 3 letters…" autocomplete="off" style="text-transform:none;letter-spacing:normal;font-size:0.95rem;width:100%;" oninput="onAdminLogSearchInput(this.value,1)">
+        <div id="log-p1-results"></div>
+      </div>
+      <div style="opacity:0.6;font-size:0.72rem;text-transform:uppercase;letter-spacing:1.5px;margin:12px 0 4px;">Player 2</div>
+      <div style="position:relative;">
+        <input class="room-input" id="log-p2-input" placeholder="Type at least 3 letters…" autocomplete="off" style="text-transform:none;letter-spacing:normal;font-size:0.95rem;width:100%;" oninput="onAdminLogSearchInput(this.value,2)">
+        <div id="log-p2-results"></div>
+      </div>
+      <div style="opacity:0.6;font-size:0.72rem;text-transform:uppercase;letter-spacing:1.5px;margin:14px 0 6px;">Result</div>
+      <div class="game-options">
+        <button class="opt-toggle" id="log-result-p1" onclick="setAdminLogResult('p1')">Player 1 Won</button>
+        <button class="opt-toggle" id="log-result-tie" onclick="setAdminLogResult('tie')">Tie</button>
+        <button class="opt-toggle" id="log-result-p2" onclick="setAdminLogResult('p2')">Player 2 Won</button>
+      </div>
+      <button class="btn btn-gold" style="margin-top:14px;padding:10px;font-size:0.9rem;width:100%;" onclick="submitAdminLogGame()">Log Game</button>
+      <div class="room-error" id="admin-log-error" style="margin-top:8px;"></div>
+    </div>
     <button class="btn btn-secondary btn-sm" style="margin-top:16px;" onclick="backToMenu()">Back</button>
   </div>
 </div>
@@ -1969,9 +1990,92 @@ async function showAdmin() {
   adminGamesLoaded = false;
   document.getElementById("admin-tab-players").classList.add("active");
   document.getElementById("admin-tab-games").classList.remove("active");
+  document.getElementById("admin-tab-log").classList.remove("active");
   document.getElementById("admin-list").style.display = "";
   document.getElementById("admin-games-list").style.display = "none";
+  document.getElementById("admin-log-panel").style.display = "none";
+  resetAdminLogPanel();
   await loadAdminPlayers();
+}
+
+// --- Admin: manually log a game result between any two players ---
+let adminLogResult = null;
+function resetAdminLogPanel() {
+  adminLogResult = null;
+  document.getElementById("log-p1-input").value = "";
+  document.getElementById("log-p2-input").value = "";
+  document.getElementById("admin-log-error").textContent = "";
+  ["log-result-p1", "log-result-tie", "log-result-p2"].forEach(id =>
+    document.getElementById(id).classList.remove("active"));
+  hideAdminLogResults(1); hideAdminLogResults(2);
+}
+
+function setAdminLogResult(result) {
+  adminLogResult = result;
+  document.getElementById("log-result-p1").classList.toggle("active", result === "p1");
+  document.getElementById("log-result-tie").classList.toggle("active", result === "tie");
+  document.getElementById("log-result-p2").classList.toggle("active", result === "p2");
+}
+
+let adminLogSearchTimer = null;
+function onAdminLogSearchInput(value, slot) {
+  clearTimeout(adminLogSearchTimer);
+  const q = value.trim();
+  if (q.length < 3) { hideAdminLogResults(slot); return; }
+  adminLogSearchTimer = setTimeout(() => runAdminLogSearch(q, slot), 250);
+}
+
+async function runAdminLogSearch(q, slot) {
+  const box = document.getElementById(`log-p${slot}-results`);
+  try {
+    const r = await fetch("/api/admin/players");
+    const all = (await r.json()).players || [];
+    const players = all.filter(p =>
+      p.username.includes(q.toLowerCase()) || p.display_name.toLowerCase().includes(q.toLowerCase()));
+    if (!players.length) { hideAdminLogResults(slot); return; }
+    box.innerHTML = players.slice(0, 10).map(p => `
+      <div class="search-result-row" onclick="pickAdminLogResult('${p.username}', ${slot})">
+        <span>${p.display_name}</span>
+        <span class="srr-games">${p.games} game${p.games === 1 ? "" : "s"}</span>
+      </div>`).join("");
+    box.style.display = "block";
+  } catch (e) { hideAdminLogResults(slot); }
+}
+
+function pickAdminLogResult(username, slot) {
+  document.getElementById(`log-p${slot}-input`).value = username;
+  hideAdminLogResults(slot);
+}
+
+function hideAdminLogResults(slot) {
+  const box = document.getElementById(`log-p${slot}-results`);
+  box.style.display = "none";
+  box.innerHTML = "";
+}
+
+async function submitAdminLogGame() {
+  const errEl = document.getElementById("admin-log-error");
+  const p1_username = document.getElementById("log-p1-input").value.trim();
+  const p2_username = document.getElementById("log-p2-input").value.trim();
+  if (!p1_username || !p2_username) { errEl.textContent = "Enter both players."; return; }
+  if (!adminLogResult) { errEl.textContent = "Pick a result."; return; }
+  errEl.textContent = "";
+  try {
+    const r = await fetch("/api/admin/log_game", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({p1_username, p2_username, result: adminLogResult}),
+    });
+    const d = await r.json();
+    if (!r.ok) { errEl.textContent = d.error || "Could not log that game."; return; }
+    resetAdminLogPanel();
+    adminGamesLoaded = false;
+    errEl.style.color = "#81c784";
+    errEl.textContent = "Logged.";
+    setTimeout(() => {
+      if (errEl.textContent === "Logged.") { errEl.textContent = ""; errEl.style.color = ""; }
+    }, 2000);
+  } catch (e) { errEl.textContent = "Network error."; }
 }
 
 async function loadAdminPlayers() {
@@ -1996,8 +2100,10 @@ async function loadAdminPlayers() {
 async function showAdminTab(tab) {
   document.getElementById("admin-tab-players").classList.toggle("active", tab === "players");
   document.getElementById("admin-tab-games").classList.toggle("active", tab === "games");
+  document.getElementById("admin-tab-log").classList.toggle("active", tab === "log");
   document.getElementById("admin-list").style.display = tab === "players" ? "" : "none";
   document.getElementById("admin-games-list").style.display = tab === "games" ? "" : "none";
+  document.getElementById("admin-log-panel").style.display = tab === "log" ? "" : "none";
   if (tab === "games" && !adminGamesLoaded) {
     adminGamesLoaded = true;
     await loadAdminGames();

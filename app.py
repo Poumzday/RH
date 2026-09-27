@@ -685,17 +685,6 @@ class Game:
             self.scores[sid] = total
             self.board_reveals[sid] = reveal
 
-    def end_game_by_forfeit(self, loser_sid):
-        """A player disconnected mid-game: score the boards as usual (for the
-        history view) but force the loss onto them regardless of the tally."""
-        if self.phase == "game_over":
-            return
-        self.end_game()
-        winner_sid = self.opponent_of(loser_sid)
-        self.scores[loser_sid] = 0
-        if winner_sid:
-            self.scores[winner_sid] = max(1, self.scores.get(winner_sid, 0))
-
     def get_state_for(self, sid):
         opp = self.opponent_of(sid) if len(self.players) == 2 else None
         your_turn = len(self.players) == 2 and self.current_player() == sid
@@ -1351,6 +1340,39 @@ def api_admin_games():
     return jsonify({"games": models.recent_games(50)})
 
 
+@app.route("/api/admin/log_game", methods=["POST"])
+def api_admin_log_game():
+    """poumsday can manually record a result between any two players, exactly
+    as if they'd played it — it lands in stats, head-to-head and the
+    leaderboard like any other game."""
+    me = _current_user()
+    if not me or me.username != ADMIN_USERNAME:
+        return jsonify({"error": "Not authorized."}), 403
+    data = request.get_json(silent=True) or {}
+    p1 = models.User.query.filter_by(username=(data.get("p1_username") or "").strip().lower()).first()
+    p2 = models.User.query.filter_by(username=(data.get("p2_username") or "").strip().lower()).first()
+    if not p1 or not p2:
+        return jsonify({"error": "Couldn't find one of those players."}), 404
+    if p1.id == p2.id:
+        return jsonify({"error": "Pick two different players."}), 400
+    result = data.get("result")  # "p1", "p2", or "tie"
+    if result == "p1":
+        p1_score, p2_score = 1, 0
+    elif result == "p2":
+        p1_score, p2_score = 0, 1
+    elif result == "tie":
+        p1_score, p2_score = 0, 0
+    else:
+        return jsonify({"error": "Pick a result."}), 400
+    models.record_game(
+        p1_user_id=p1.id, p2_user_id=p2.id,
+        p1_name=p1.display_name, p2_name=p2.display_name,
+        p1_score=p1_score, p2_score=p2_score,
+        vs_bot=False, boards={"p1": [], "p2": []},
+    )
+    return jsonify({"ok": True})
+
+
 @app.route("/api/headtohead")
 def api_headtohead():
     me = _current_user()
@@ -1823,9 +1845,6 @@ def on_connect():
 @socketio.on("disconnect")
 def on_disconnect():
     sid = request.sid
-    # Handle the game/spectator side first, while sid_to_user/sid_to_name still
-    # know who this sid was — record_finished_game needs that to attribute the
-    # forfeited game to the right account.
     game_id = player_game.pop(sid, None)
     if game_id and game_id in games:
         game = games[game_id]
@@ -1838,9 +1857,8 @@ def on_disconnect():
                     socketio.emit("opponent_left", to=p)
             for s in game.spectators:
                 socketio.emit("opponent_left", to=s)
-            if len(game.players) == 2 and game.phase != "game_over":
-                game.end_game_by_forfeit(sid)
-                record_finished_game(game)
+            # A disconnect just ends the game with no result recorded — no win,
+            # no loss, for either player.
             to_del = [c for c, gid in rooms.items() if gid == game_id]
             for c in to_del:
                 del rooms[c]
