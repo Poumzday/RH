@@ -27,9 +27,16 @@ def month_label():
 
 def init_db(app):
     url = os.environ.get("DATABASE_URL", "sqlite:///royalty.db")
-    # Neon/Render hand out "postgres://" but SQLAlchemy requires "postgresql://".
+    # Neon/Render hand out "postgres://"; SQLAlchemy wants "postgresql://", and
+    # we pin the driver to psycopg2 explicitly. A bare "postgresql://" leaves
+    # SQLAlchemy to pick a default driver, and newer SQLAlchemy releases can
+    # default that to psycopg (v3) — which isn't installed here (we use
+    # psycopg2-binary + psycogreen for eventlet compatibility) and crashes
+    # the app on boot with "No module named 'psycopg'".
     if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
+        url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif url.startswith("postgresql://") and "+" not in url.split("://", 1)[0]:
+        url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
     app.config["SQLALCHEMY_DATABASE_URI"] = url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     # SQLAlchemy's QueuePool uses threading.Condition, which breaks under
