@@ -42,29 +42,40 @@ def init_db(app):
         _migrate(app)
 
 
+def _add_column_if_missing(inspector, table, column, ddl, quoted_table=None):
+    """Run one ALTER TABLE ADD COLUMN, skipping it if the column's already
+    there. Failures are logged rather than raised, so a migration hiccup
+    (e.g. a permissions or syntax quirk on one host's Postgres) can't take
+    the whole app down — it just leaves that column/feature unavailable.
+    `table` is the bare name (for reflection); pass `quoted_table` too when
+    the name needs quoting in DDL, e.g. "user" being a reserved word."""
+    cols = {c["name"] for c in inspector.get_columns(table)}
+    if column in cols:
+        return
+    try:
+        with db.engine.begin() as conn:
+            conn.execute(text(f"ALTER TABLE {quoted_table or table} ADD COLUMN {ddl}"))
+    except Exception as e:
+        print(f"[migrate] Could not add {table}.{column}: {e}")
+
+
 def _migrate(app):
     """Add columns to existing tables that create_all() leaves untouched."""
     inspector = inspect(db.engine)
-    user_cols = {c["name"] for c in inspector.get_columns("user")}
-    if "reveal_attacked_default" not in user_cols:
-        with db.engine.begin() as conn:
-            conn.execute(text(
-                'ALTER TABLE "user" ADD COLUMN reveal_attacked_default '
-                'BOOLEAN NOT NULL DEFAULT false'
-            ))
-    if "time_limit_default" not in user_cols:
-        with db.engine.begin() as conn:
-            conn.execute(text(
-                'ALTER TABLE "user" ADD COLUMN time_limit_default '
-                'INTEGER NOT NULL DEFAULT 0'
-            ))
-    record_cols = {c["name"] for c in inspector.get_columns("game_record")}
-    if "spectators_json" not in record_cols:
-        with db.engine.begin() as conn:
-            conn.execute(text(
-                "ALTER TABLE game_record ADD COLUMN spectators_json "
-                "TEXT NOT NULL DEFAULT '[]'"
-            ))
+    _add_column_if_missing(
+        inspector, "user", "reveal_attacked_default",
+        "reveal_attacked_default BOOLEAN NOT NULL DEFAULT false",
+        quoted_table='"user"',
+    )
+    _add_column_if_missing(
+        inspector, "user", "time_limit_default",
+        "time_limit_default INTEGER NOT NULL DEFAULT 0",
+        quoted_table='"user"',
+    )
+    _add_column_if_missing(
+        inspector, "game_record", "spectators_json",
+        "spectators_json TEXT NOT NULL DEFAULT '[]'",
+    )
 
 
 class User(db.Model):
