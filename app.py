@@ -15,7 +15,7 @@ import threading
 import time
 from datetime import timedelta, datetime, timezone
 from flask import Flask, render_template, request, session, jsonify
-from flask_socketio import SocketIO, emit, join_room
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
 import models
 
@@ -296,9 +296,12 @@ class Game:
         self.turns_taken = {}
         self.has_bot = False
         self.spectators = []
+        self.kicked_sids = set()       # spectator sids a player has kicked; barred from rejoining
+        self.kicked_user_ids = set()   # same, keyed by account, so a logged-in kick sticks across tabs
         self.recorded = False
         self.no_scoring = False        # game not saved to records
         self.reveal_attacked = False   # attacked units stay face-up for the rest of the game
+        self.no_spectators = False     # creator/challenger opted out of allowing spectators
         self.time_limit = 0            # seconds per turn (0 = no limit)
         self.turn_token = 0            # bumped each turn; used to cancel stale turn timers
         self.bg_winrate = {}           # sid -> head-to-head win rate (0-100) vs opp; cached at game start
@@ -681,6 +684,17 @@ class Game:
                 })
             self.scores[sid] = total
             self.board_reveals[sid] = reveal
+
+    def end_game_by_forfeit(self, loser_sid):
+        """A player disconnected mid-game: score the boards as usual (for the
+        history view) but force the loss onto them regardless of the tally."""
+        if self.phase == "game_over":
+            return
+        self.end_game()
+        winner_sid = self.opponent_of(loser_sid)
+        self.scores[loser_sid] = 0
+        if winner_sid:
+            self.scores[winner_sid] = max(1, self.scores.get(winner_sid, 0))
 
     def get_state_for(self, sid):
         opp = self.opponent_of(sid) if len(self.players) == 2 else None
@@ -1113,6 +1127,7 @@ def record_finished_game(game):
             p1_name=name_for(p1), p2_name=name_for(p2),
             p1_score=game.scores.get(p1, 0), p2_score=game.scores.get(p2, 0),
             vs_bot=game.has_bot, boards=boards,
+            spectator_names=[display_name_for(sp) for sp in game.spectators],
         )
 
 
@@ -1141,6 +1156,40 @@ def schedule_turn_timer(game):
     socketio.start_background_task(_run)
 
 
+def _is_admin_sid(sid):
+    """True only for the one account allowed to see who's spectating a game."""
+    uid = sid_to_user.get(sid)
+    if not uid:
+        return False
+    u = models.db.session.get(models.User, uid)
+    return bool(u) and u.username == ADMIN_USERNAME
+
+
+def _kicked_from(game, sid):
+    """True if a player already kicked this sid (or this account) from `game`."""
+    if sid in game.kicked_sids:
+        return True
+    uid = sid_to_user.get(sid)
+    return bool(uid) and uid in game.kicked_user_ids
+
+
+def _spectator_payload(game):
+    return [{"sid": sp, "name": display_name_for(sp)} for sp in game.spectators]
+
+
+def notify_spectator_names(game):
+    """Push the current spectator list right away (on join/leave/kick), rather
+    than waiting for the next game-state broadcast. Both players always get
+    it (so they can kick); spectators only get it if they're the admin."""
+    payload = _spectator_payload(game)
+    for sid in game.players:
+        if sid != BOT_SID:
+            socketio.emit("spectator_names", {"names": payload}, to=sid)
+    for sid in game.spectators:
+        if _is_admin_sid(sid):
+            socketio.emit("spectator_names", {"names": payload}, to=sid)
+
+
 def broadcast_state(game):
     if game.phase == "game_over":
         record_finished_game(game)
@@ -1153,6 +1202,7 @@ def broadcast_state(game):
     game.pending_discard_anim = None
     logs = game.pending_logs
     game.pending_logs = []
+    spectator_payload = _spectator_payload(game)
     for sid in game.players:
         if sid == BOT_SID:
             continue
@@ -1165,6 +1215,7 @@ def broadcast_state(game):
             st["discard_anim"] = discard_anim
         if logs:
             st["event_logs"] = logs
+        st["spectator_names"] = spectator_payload  # both players can always see + kick
         socketio.emit("game_state", st, to=sid)
     for sid in game.spectators:
         st = game.get_spectator_state()
@@ -1176,6 +1227,8 @@ def broadcast_state(game):
             st["discard_anim"] = discard_anim
         if logs:
             st["event_logs"] = logs
+        if _is_admin_sid(sid):
+            st["spectator_names"] = spectator_payload
         socketio.emit("game_state", st, to=sid)
     # Schedule bot move if needed
     schedule_bot(game)
@@ -1347,6 +1400,8 @@ def api_ongoing_games():
     for game in games.values():
         if game.has_bot or len(game.players) < 2 or game.phase in ("waiting", "game_over"):
             continue
+        if game.no_spectators:
+            continue
         p1, p2 = game.players
         rows.append({
             "game_id": game.id,
@@ -1369,6 +1424,7 @@ def on_create_room(data=None):
     game = Game(game_id)
     game.no_scoring = bool(data.get("no_scoring"))
     game.reveal_attacked = bool(data.get("reveal_attacked"))
+    game.no_spectators = bool(data.get("no_spectators"))
     try:
         tl = int(data.get("time_limit") or 0)
     except (TypeError, ValueError):
@@ -1422,6 +1478,7 @@ def on_send_challenge(data):
         "to_user_id": target.id,
         "no_scoring": bool(data.get("no_scoring")),
         "reveal_attacked": bool(data.get("reveal_attacked")),
+        "no_spectators": bool(data.get("no_spectators")),
         "time_limit": tl,
     }
     challenges_by_id[challenge_id] = challenge
@@ -1482,6 +1539,7 @@ def on_respond_challenge(data):
     game = Game(game_id)
     game.no_scoring = challenge["no_scoring"]
     game.reveal_attacked = challenge["reveal_attacked"]
+    game.no_spectators = challenge["no_spectators"]
     game.time_limit = challenge["time_limit"]
     game.add_player(challenger_sid)
     game.add_player(sid)
@@ -1526,11 +1584,18 @@ def on_spectate_game(data):
         return
     if sid in game.players or sid in game.spectators:
         return
+    if game.no_spectators:
+        socketio.emit("spectate_error", {"msg": "The players in that game turned off spectating."}, to=sid)
+        return
+    if _kicked_from(game, sid):
+        socketio.emit("spectate_error", {"msg": "A player removed you from this game."}, to=sid)
+        return
     game.add_spectator(sid)
     join_room(game.id)
     player_game[sid] = game_id
     st = game.get_spectator_state()
     socketio.emit("game_state", st, to=sid)
+    notify_spectator_names(game)
 
 
 @socketio.on("spectate_user")
@@ -1552,11 +1617,40 @@ def on_spectate_user(data):
     game = games[game_id]
     if sid in game.players or sid in game.spectators:
         return
+    if game.no_spectators:
+        socketio.emit("spectate_error", {"msg": "The players in that game turned off spectating."}, to=sid)
+        return
+    if _kicked_from(game, sid):
+        socketio.emit("spectate_error", {"msg": "A player removed you from this game."}, to=sid)
+        return
     game.add_spectator(sid)
     join_room(game.id)
     player_game[sid] = game_id
     st = game.get_spectator_state()
     socketio.emit("game_state", st, to=sid)
+    notify_spectator_names(game)
+
+
+@socketio.on("kick_spectator")
+def on_kick_spectator(data):
+    """Either player can remove a spectator from their game; that spectator
+    (by sid, and by account if logged in) can't rejoin this game afterward."""
+    sid = request.sid
+    game = games.get(player_game.get(sid))
+    if not game or sid not in game.players:
+        return
+    target_sid = (data or {}).get("sid")
+    if not target_sid or target_sid not in game.spectators:
+        return
+    game.remove_spectator(target_sid)
+    game.kicked_sids.add(target_sid)
+    target_uid = sid_to_user.get(target_sid)
+    if target_uid:
+        game.kicked_user_ids.add(target_uid)
+    player_game.pop(target_sid, None)
+    leave_room(game.id, sid=target_sid)
+    socketio.emit("kicked_from_game", to=target_sid)
+    notify_spectator_names(game)
 
 
 @socketio.on("join_bot")
@@ -1729,29 +1823,34 @@ def on_connect():
 @socketio.on("disconnect")
 def on_disconnect():
     sid = request.sid
+    # Handle the game/spectator side first, while sid_to_user/sid_to_name still
+    # know who this sid was — record_finished_game needs that to attribute the
+    # forfeited game to the right account.
+    game_id = player_game.pop(sid, None)
+    if game_id and game_id in games:
+        game = games[game_id]
+        if sid in game.spectators:
+            game.remove_spectator(sid)
+            notify_spectator_names(game)
+        elif sid in game.players:
+            for p in game.players:
+                if p != sid and p != BOT_SID:
+                    socketio.emit("opponent_left", to=p)
+            for s in game.spectators:
+                socketio.emit("opponent_left", to=s)
+            if len(game.players) == 2 and game.phase != "game_over":
+                game.end_game_by_forfeit(sid)
+                record_finished_game(game)
+            to_del = [c for c, gid in rooms.items() if gid == game_id]
+            for c in to_del:
+                del rooms[c]
+            del games[game_id]
     uid = sid_to_user.get(sid)
     if uid is not None and user_to_sid.get(uid) == sid:
         user_to_sid.pop(uid, None)
     sid_to_user.pop(sid, None)
     sid_to_name.pop(sid, None)
     last_emote_at.pop(sid, None)
-    game_id = player_game.pop(sid, None)
-    if not game_id or game_id not in games:
-        return
-    game = games[game_id]
-    if sid in game.spectators:
-        game.remove_spectator(sid)
-        return
-    if sid in game.players:
-        for p in game.players:
-            if p != sid and p != BOT_SID:
-                socketio.emit("opponent_left", to=p)
-        for s in game.spectators:
-            socketio.emit("opponent_left", to=s)
-        to_del = [c for c, gid in rooms.items() if gid == game_id]
-        for c in to_del:
-            del rooms[c]
-        del games[game_id]
 
 
 if __name__ == "__main__":

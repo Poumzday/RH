@@ -628,11 +628,9 @@ body.on-menu {
 .emote-opt.toast { color:#ffcc80; }
 .emote-opt.sketch { grid-column:1 / -1; background:linear-gradient(135deg,#b71c1c,#e53935); color:#fff176; font-family:Impact,'Arial Black',sans-serif; font-size:1rem; letter-spacing:3px; font-style:italic; }
 .emote-opt.sketch:hover { background:linear-gradient(135deg,#c62828,#ff5252); }
-.emote-bubble { position:absolute; left:50%; z-index:60; pointer-events:none; padding:8px 16px; border-radius:22px; background:#fff; color:#222; box-shadow:0 6px 18px rgba(0,0,0,0.45); animation:emoteBubble 2.8s ease-out forwards; }
+.emote-bubble { position:fixed; z-index:250; pointer-events:none; padding:8px 16px; border-radius:22px; background:#fff; color:#222; box-shadow:0 6px 18px rgba(0,0,0,0.45); animation:emoteBubble 2.8s ease-out forwards; }
 .emote-bubble::after { content:""; position:absolute; left:50%; width:14px; height:14px; background:inherit; border-radius:2px; transform:translateX(-50%) rotate(45deg); }
-.emote-bubble.from-you { bottom:100%; margin-bottom:8px; }
 .emote-bubble.from-you::after { bottom:-6px; }
-.emote-bubble.from-opp { top:100%; margin-top:8px; }
 .emote-bubble.from-opp::after { top:-6px; }
 .emote-bubble.laugh, .emote-bubble.angry, .emote-bubble.think { font-size:2.4rem; line-height:1.1; padding:6px 16px; }
 .emote-bubble.angry { background:#ffebee; box-shadow:0 6px 18px rgba(198,40,40,0.55); animation-name:emoteBubble, emoteShake; animation-duration:2.8s, 0.4s; animation-iteration-count:1, 4; animation-fill-mode:forwards, none; }
@@ -645,6 +643,24 @@ body.on-menu {
 @keyframes emoteBubble { 0% { opacity:0; transform:translateX(-50%) scale(0.3); } 12% { opacity:1; transform:translateX(-50%) scale(1.15); } 20% { transform:translateX(-50%) scale(1); } 80% { opacity:1; } 100% { opacity:0; transform:translateX(-50%) translateY(-14px) scale(1); } }
 @keyframes emoteSlam { 0% { opacity:0; transform:translateX(-50%) rotate(-6deg) scale(3); } 10% { opacity:1; transform:translateX(-50%) rotate(-6deg) scale(0.9); } 14% { transform:translateX(calc(-50% - 7px)) rotate(-7deg) scale(1.08); } 18% { transform:translateX(calc(-50% + 7px)) rotate(-5deg) scale(1); } 22% { transform:translateX(calc(-50% - 4px)) rotate(-6deg) scale(1.04); } 26% { transform:translateX(-50%) rotate(-6deg) scale(1); } 85% { opacity:1; transform:translateX(-50%) rotate(-6deg) scale(1); } 100% { opacity:0; transform:translateX(-50%) rotate(-6deg) translateY(-14px) scale(1); } }
 @keyframes emoteShake { 0%,100% { margin-left:0; } 25% { margin-left:-6px; } 75% { margin-left:6px; } }
+
+
+/* --- Spectator list bubble (poumsday only) --- */
+#spectator-wrap { position:fixed; right:14px; bottom:14px; z-index:90; display:none; flex-direction:column-reverse; align-items:flex-end; gap:10px; }
+#spectator-wrap.visible { display:flex; }
+#spectator-btn { width:44px; height:44px; border-radius:50%; border:1px solid rgba(129,212,250,0.55); background:radial-gradient(circle at 30% 25%, rgba(255,255,255,0.28), rgba(0,0,0,0.5)); color:#fff; font-size:1.25rem; line-height:1; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.45); transition:transform 0.15s, border-color 0.15s; position:relative; }
+#spectator-btn:hover { transform:scale(1.08); border-color:#81d4fa; }
+#spectator-btn:active { transform:scale(0.94); }
+#spectator-count { position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; padding:0 3px; border-radius:8px; background:#0288d1; color:#fff; font-size:0.6rem; font-weight:900; line-height:16px; text-align:center; box-shadow:0 0 0 2px rgba(0,0,0,0.4); }
+#spectator-panel { display:none; flex-direction:column; gap:4px; padding:10px 12px; min-width:150px; max-width:220px; border-radius:14px; background:rgba(10,30,45,0.94); border:1px solid rgba(129,212,250,0.35); box-shadow:0 8px 24px rgba(0,0,0,0.5); animation:emoteMenuIn 0.16s ease-out; transform-origin:bottom right; }
+#spectator-panel.open { display:flex; }
+#spectator-panel .sp-title { font-size:0.62rem; text-transform:uppercase; letter-spacing:1.5px; opacity:0.6; margin-bottom:2px; }
+.sp-name { font-size:0.88rem; color:#81d4fa; }
+.sp-empty { font-size:0.82rem; opacity:0.5; font-style:italic; }
+.sp-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.sp-kick { background:rgba(198,40,40,0.25); border:1px solid rgba(239,83,80,0.5); color:#ef9a9a; border-radius:6px; width:20px; height:20px; line-height:1; font-size:0.7rem; cursor:pointer; flex-shrink:0; }
+.sp-kick:hover { background:rgba(198,40,40,0.5); color:#fff; }
+.admin-spec-toggle { font-size:0.68rem; padding:2px 8px; }
 
 /* In-game help button */
 #ingame-help { position:fixed; top:12px; right:12px; z-index:100; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:50%; width:36px; height:36px; font-size:1.1rem; font-weight:bold; cursor:pointer; display:none; }
@@ -848,6 +864,7 @@ body.on-menu {
         <button class="opt-toggle" id="opt-no-scoring" onclick="toggleOpt('no_scoring')">No Scoring</button>
         <button class="opt-toggle" id="opt-reveal-attacked" onclick="toggleOpt('reveal_attacked')">Reveal Attacked</button>
         <button class="opt-toggle" id="opt-time-limit" onclick="toggleTimeLimit()">Time Limit</button>
+        <button class="opt-toggle" id="opt-no-spectators" onclick="toggleOpt('no_spectators')">No Spectators</button>
       </div>
       <div id="time-limit-slider" style="display:none;">
         <input type="range" id="tl-range" min="15" max="120" step="5" value="30" oninput="setTimeLimit(this.value)">
@@ -871,6 +888,7 @@ body.on-menu {
         <button class="opt-toggle" id="chal-opt-no-scoring" onclick="toggleChallengeOpt('no_scoring')">No Scoring</button>
         <button class="opt-toggle" id="chal-opt-reveal-attacked" onclick="toggleChallengeOpt('reveal_attacked')">Reveal Attacked</button>
         <button class="opt-toggle" id="chal-opt-time-limit" onclick="toggleChallengeTimeLimit()">Time Limit</button>
+        <button class="opt-toggle" id="chal-opt-no-spectators" onclick="toggleChallengeOpt('no_spectators')">No Spectators</button>
       </div>
       <div id="chal-time-limit-slider" style="display:none;">
         <input type="range" id="chal-tl-range" min="15" max="120" step="5" value="30" oninput="setChallengeTimeLimit(this.value)">
@@ -1245,6 +1263,17 @@ body.on-menu {
     <button class="emote-opt text sketch" onclick="sendEmote('sketch')">SKETCH</button>
   </div>
   <button id="emote-btn" onclick="toggleEmoteMenu()" aria-label="Emotes">💬</button>
+</div>
+
+<!-- Spectator list (admin-only) -->
+<div id="spectator-wrap">
+  <div id="spectator-panel">
+    <div class="sp-title">Spectating</div>
+    <div id="spectator-list"></div>
+  </div>
+  <button id="spectator-btn" onclick="toggleSpectatorPanel()" aria-label="Spectators">
+    👁<span id="spectator-count" style="display:none;"></span>
+  </button>
 </div>
 
 <!-- Mulligan overlay -->
@@ -1985,17 +2014,25 @@ async function loadAdminGames() {
     games = (await r.json()).games || [];
   } catch (e) { list.innerHTML = '<div class="hist-empty">Could not load.</div>'; return; }
   if (!games.length) { list.innerHTML = '<div class="hist-empty">No games yet.</div>'; return; }
-  list.innerHTML = games.map(g => {
+  list.innerHTML = games.map((g, i) => {
     const p2 = g.vs_bot ? "Bot" : g.p2_name;
     const winner = g.winner === 1 ? g.p1_name : (g.winner === 2 ? p2 : null);
     const cls = g.winner === 1 ? "hist-win" : (g.winner === 2 ? "hist-loss" : "hist-tie");
     const date = new Date(g.finished_at).toLocaleDateString(undefined, {month:"short", day:"numeric"});
+    const specs = g.spectators || [];
     return `<div class="hist-row">
       <div class="hist-head">
         <span>${g.p1_name} <strong>${g.p1_score}</strong> – <strong>${g.p2_score}</strong> ${p2}</span>
         <span class="hist-date">${date}</span>
       </div>
-      <div class="hist-vs ${cls}">${winner ? winner + " won" : "Tie"}</div>
+      <div class="hist-vs ${cls}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span>${winner ? winner + " won" : "Tie"}</span>
+        <button class="hist-toggle admin-spec-toggle" style="margin:0;" onclick="toggleAdminSpectators(${i})">👁 ${specs.length}</button>
+      </div>
+      <div class="hist-final admin-spec-panel" id="admin-spec-${i}">
+        ${specs.length ? specs.map(n => `<div class="sp-name" style="padding:2px 0;">${n}</div>`).join("")
+                       : '<div class="sp-empty">No spectators</div>'}
+      </div>
     </div>`;
   }).join("");
 }
@@ -2161,6 +2198,10 @@ function toggleFinalBoard(btn) {
   btn.textContent = open ? "Hide final board" : "See final board";
 }
 
+function toggleAdminSpectators(i) {
+  document.getElementById(`admin-spec-${i}`).classList.toggle("open");
+}
+
 async function loadHeadToHead(username) {
   if (!username) return;
   document.getElementById("stats-winrate").innerHTML = "";
@@ -2194,7 +2235,8 @@ function showFriendsModeScreen() {
   el.classList.add("visible");
 }
 
-let challengeOptions = { no_scoring: false, reveal_attacked: false, time_limit: 0 };
+let challengeOptions = { no_scoring: false, reveal_attacked: false, time_limit: 0, no_spectators: false };
+const CHALLENGE_OPT_IDS = { no_scoring: "chal-opt-no-scoring", reveal_attacked: "chal-opt-reveal-attacked", no_spectators: "chal-opt-no-spectators" };
 
 function showChallengeScreen() {
   hideAll();
@@ -2226,8 +2268,7 @@ function showChallengeScreen() {
 
 function toggleChallengeOpt(key) {
   challengeOptions[key] = !challengeOptions[key];
-  const id = key === "no_scoring" ? "chal-opt-no-scoring" : "chal-opt-reveal-attacked";
-  document.getElementById(id).classList.toggle("active", challengeOptions[key]);
+  document.getElementById(CHALLENGE_OPT_IDS[key]).classList.toggle("active", challengeOptions[key]);
 }
 function toggleChallengeTimeLimit() {
   const on = challengeOptions.time_limit === 0;
@@ -2412,11 +2453,11 @@ function showRoomScreen() {
   }
 }
 
-let gameOptions = { no_scoring: false, reveal_attacked: false, time_limit: 0 };
+let gameOptions = { no_scoring: false, reveal_attacked: false, time_limit: 0, no_spectators: false };
+const GAME_OPT_IDS = { no_scoring: "opt-no-scoring", reveal_attacked: "opt-reveal-attacked", no_spectators: "opt-no-spectators" };
 function toggleOpt(key) {
   gameOptions[key] = !gameOptions[key];
-  const id = key === "no_scoring" ? "opt-no-scoring" : "opt-reveal-attacked";
-  document.getElementById(id).classList.toggle("active", gameOptions[key]);
+  document.getElementById(GAME_OPT_IDS[key]).classList.toggle("active", gameOptions[key]);
 }
 function toggleTimeLimit() {
   const on = gameOptions.time_limit === 0;
@@ -3509,6 +3550,53 @@ function doMulligan(yes) {
   document.getElementById("mulligan-wait").style.display = "block";
 }
 
+// --- Spectator list (visible only to the poumsday account) ---
+let spectatorEntries = [];
+
+function toggleSpectatorPanel(force) {
+  const panel = document.getElementById("spectator-panel");
+  panel.classList.toggle("open", force === undefined ? !panel.classList.contains("open") : force);
+}
+
+// Either player can always see + kick spectators; a spectator only sees this
+// (read-only) if they're logged in as poumsday.
+function renderSpectatorNames(entries) {
+  spectatorEntries = entries || [];
+  const isSpec = !!(state && state.is_spectator);
+  const isAdmin = currentUser && currentUser.username === "poumsday";
+  const canSee = !isSpec || isAdmin;
+  // Kicking should work at any point in the game, including mulligan — only
+  // "waiting" (no 2nd player yet, so no spectators are possible) and
+  // "game_over" hide it.
+  const inPlay = state && state.phase !== "waiting" && state.phase !== "game_over";
+  document.getElementById("spectator-wrap").classList.toggle("visible", canSee && inPlay);
+  if (!canSee) return;
+  const canKick = !isSpec;
+  const count = document.getElementById("spectator-count");
+  count.textContent = spectatorEntries.length;
+  count.style.display = spectatorEntries.length ? "block" : "none";
+  document.getElementById("spectator-list").innerHTML = spectatorEntries.length
+    ? spectatorEntries.map(s => `
+        <div class="sp-row">
+          <span class="sp-name">${s.name}</span>
+          ${canKick ? `<button class="sp-kick" onclick="kickSpectator('${s.sid}')" aria-label="Remove ${s.name}">✕</button>` : ""}
+        </div>`).join("")
+    : '<div class="sp-empty">No one yet</div>';
+}
+
+function kickSpectator(sid) {
+  const entry = spectatorEntries.find(s => s.sid === sid);
+  if (!confirm(`Remove ${entry ? entry.name : "this spectator"} from the game?`)) return;
+  socket.emit("kick_spectator", {sid});
+}
+
+socket.on("spectator_names", (d) => renderSpectatorNames(d.names));
+socket.on("kicked_from_game", () => { alert("A player removed you from this game."); location.reload(); });
+
+document.addEventListener("click", (ev) => {
+  if (!ev.target.closest("#spectator-wrap")) toggleSpectatorPanel(false);
+});
+
 // --- Emotes ---
 const EMOTE_CONTENT = { laugh: "😂", angry: "😡", think: "🤔", thanks: "Thank you", toast: "TOAST", sketch: "SKETCH" };
 let emoteCooling = false;
@@ -3532,12 +3620,18 @@ socket.on("emote", (e) => {
   if (!EMOTE_CONTENT[e.type]) return;
   const row = document.getElementById(e.side === "you" ? "your-board-row" : "opp-board-row");
   if (!row) return;
-  row.querySelectorAll(".emote-bubble").forEach(b => b.remove());
+  // Attach to <body> (not the board row) so the bubble always paints above cards,
+  // the deck and the discard pile, whatever stacking context the row lives in.
+  document.querySelectorAll(`.emote-bubble.from-${e.side}`).forEach(b => b.remove());
+  const rect = row.getBoundingClientRect();
   const bubble = document.createElement("div");
   bubble.className = `emote-bubble ${e.type} from-${e.side}`;
   bubble.textContent = EMOTE_CONTENT[e.type];
-  row.appendChild(bubble);
-  setTimeout(() => bubble.remove(), 2900);
+  bubble.style.left = (rect.left + rect.width / 2) + "px";
+  if (e.side === "you") bubble.style.bottom = (window.innerHeight - rect.top + 8) + "px";
+  else bubble.style.top = (rect.bottom + 8) + "px";
+  document.body.appendChild(bubble);
+  setTimeout(() => bubble.remove(), 3300);
 });
 
 // Close the emote menu when tapping elsewhere.
@@ -3551,6 +3645,7 @@ function render() {
   const isSpec = state.is_spectator;
   document.getElementById("emote-wrap").classList.toggle(
     "visible", !isSpec && !["waiting", "mulligan", "game_over"].includes(state.phase));
+  renderSpectatorNames("spectator_names" in state ? state.spectator_names : spectatorEntries);
   const t = document.getElementById("turn-text");
   if (state.phase === "game_over") { t.textContent = "Game Over"; t.style.color = "#fff"; }
   else if (isSpec) {

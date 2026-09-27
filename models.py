@@ -58,6 +58,13 @@ def _migrate(app):
                 'ALTER TABLE "user" ADD COLUMN time_limit_default '
                 'INTEGER NOT NULL DEFAULT 0'
             ))
+    record_cols = {c["name"] for c in inspector.get_columns("game_record")}
+    if "spectators_json" not in record_cols:
+        with db.engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE game_record ADD COLUMN spectators_json "
+                "TEXT NOT NULL DEFAULT '[]'"
+            ))
 
 
 class User(db.Model):
@@ -90,6 +97,7 @@ class GameRecord(db.Model):
     winner = db.Column(db.Integer, nullable=True)  # 1, 2, or None for a tie
     vs_bot = db.Column(db.Boolean, default=False)
     boards_json = db.Column(db.Text, nullable=False)  # {"p1": [...units...], "p2": [...]}
+    spectators_json = db.Column(db.Text, nullable=False, default="[]")  # display names, admin-only view
 
 
 class ChallengeContact(db.Model):
@@ -126,7 +134,8 @@ def authenticate(username, password):
     return None
 
 
-def record_game(p1_user_id, p2_user_id, p1_name, p2_name, p1_score, p2_score, vs_bot, boards):
+def record_game(p1_user_id, p2_user_id, p1_name, p2_name, p1_score, p2_score, vs_bot, boards,
+                 spectator_names=None):
     if p1_score > p2_score:
         winner = 1
     elif p2_score > p1_score:
@@ -139,6 +148,7 @@ def record_game(p1_user_id, p2_user_id, p1_name, p2_name, p1_score, p2_score, vs
         p1_score=p1_score, p2_score=p2_score,
         winner=winner, vs_bot=vs_bot,
         boards_json=json.dumps(boards),
+        spectators_json=json.dumps(spectator_names or []),
     )
     db.session.add(rec)
     db.session.commit()
@@ -298,6 +308,7 @@ def recent_games(limit=5):
             "p2_score": r.p2_score,
             "winner": r.winner,
             "vs_bot": r.vs_bot,
+            "spectators": json.loads(r.spectators_json or "[]"),
         })
     return out
 
