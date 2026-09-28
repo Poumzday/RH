@@ -46,19 +46,34 @@ def display_name_for(sid):
 KNIGHT_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 BOT_SID = "__bot__"
 
-def random_royals():
-    """Generate 12 royal ranks: each card independently 33.1% J / 33.1% Q / 33.1% K / 0.7% Emperor."""
+ROYAL_BASE_WEIGHTS = {"J": 0.331, "Q": 0.331, "K": 0.331, "E": 0.007}
+ROYAL_CAP = 6  # max copies of any one royal rank per deck
+
+
+def random_royals(count=12):
+    """Generate `count` royal ranks, each normally 33.1% J / 33.1% Q / 33.1% K
+    / 0.7% Emperor — but capped at ROYAL_CAP copies of any single rank. Once a
+    rank hits the cap, its weight is dropped and split evenly across whichever
+    ranks are still under the cap, so the rest of the draws average over them."""
+    counts = {r: 0 for r in ROYAL_BASE_WEIGHTS}
     ranks = []
-    for _ in range(12):
-        r = random.random()
-        if r < 0.007:
-            ranks.append("E")
-        elif r < 0.338:
-            ranks.append("J")
-        elif r < 0.669:
-            ranks.append("Q")
-        else:
-            ranks.append("K")
+    for _ in range(count):
+        eligible = [r for r in ROYAL_BASE_WEIGHTS if counts[r] < ROYAL_CAP]
+        if not eligible:
+            break  # every rank hit the cap (needs count > 4 * ROYAL_CAP to happen)
+        capped_weight = sum(w for r, w in ROYAL_BASE_WEIGHTS.items() if r not in eligible)
+        bonus = capped_weight / len(eligible)
+        weights = {r: ROYAL_BASE_WEIGHTS[r] + bonus for r in eligible}
+        roll = random.random() * sum(weights.values())
+        cum = 0
+        chosen = eligible[-1]
+        for r in eligible:
+            cum += weights[r]
+            if roll < cum:
+                chosen = r
+                break
+        counts[chosen] += 1
+        ranks.append(chosen)
     return ranks
 
 # 12 unique royal visual styles
