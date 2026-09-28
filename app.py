@@ -1179,6 +1179,14 @@ def notify_spectator_names(game):
             socketio.emit("spectator_names", {"names": payload}, to=sid)
 
 
+def notify_spectator_joined(game, spectator_sid):
+    """Pop a toast for both players the moment someone starts spectating."""
+    name = display_name_for(spectator_sid)
+    for sid in game.players:
+        if sid != BOT_SID:
+            socketio.emit("spectator_joined", {"name": name}, to=sid)
+
+
 def broadcast_state(game):
     if game.phase == "game_over":
         record_finished_game(game)
@@ -1618,6 +1626,7 @@ def on_spectate_game(data):
     st = game.get_spectator_state()
     socketio.emit("game_state", st, to=sid)
     notify_spectator_names(game)
+    notify_spectator_joined(game, sid)
 
 
 @socketio.on("spectate_user")
@@ -1651,6 +1660,7 @@ def on_spectate_user(data):
     st = game.get_spectator_state()
     socketio.emit("game_state", st, to=sid)
     notify_spectator_names(game)
+    notify_spectator_joined(game, sid)
 
 
 @socketio.on("kick_spectator")

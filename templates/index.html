@@ -329,6 +329,7 @@ h1 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: 2px; opacity: 0.7; }
   padding: 8px 20px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
   animation: toastPop 1.5s ease-out forwards; pointer-events: none;
 }
+.error-toast.info-toast { background: rgba(2,136,209,0.92); }
 @keyframes toastPop { 0%{opacity:0;transform:translateX(-50%) translateY(10px)} 15%{opacity:1;transform:translateX(-50%) translateY(0)} 70%{opacity:1} 100%{opacity:0} }
 
 /* --- Wide board when many units --- */
@@ -3697,6 +3698,7 @@ function kickSpectator(sid) {
 }
 
 socket.on("spectator_names", (d) => renderSpectatorNames(d.names));
+socket.on("spectator_joined", (d) => showToast(`👁 ${d.name} started spectating`, "info"));
 socket.on("kicked_from_game", () => { alert("A player removed you from this game."); location.reload(); });
 
 document.addEventListener("click", (ev) => {
@@ -3860,9 +3862,9 @@ function renderHand() {
   });
 }
 
-function showToast(msg) {
+function showToast(msg, type) {
   const t = document.createElement("div");
-  t.className = "error-toast";
+  t.className = type === "info" ? "error-toast info-toast" : "error-toast";
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 1500);
